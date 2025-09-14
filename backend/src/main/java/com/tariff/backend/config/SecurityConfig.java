@@ -15,7 +15,8 @@ public class SecurityConfig {
       .csrf(csrf -> csrf.disable()) // not needed for simple GETs/APIs
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/health").permitAll()
-        .anyRequest().authenticated()
+        // .anyRequest().authenticated()
+        .anyRequest().permitAll()
       )
       .httpBasic(Customizer.withDefaults()); // keep basic auth for other endpoints (optional)
 
