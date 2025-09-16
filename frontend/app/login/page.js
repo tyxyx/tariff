@@ -1,34 +1,37 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {LoginForm, LoginInput} from "@/components/login-form";
+import { LoginForm, LoginInput } from "@/components/login-form";
 import { colors } from "@/styles/colors";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calculator } from "lucide-react";
 
-export default function LoginPage(){
-    return(
-        <div
-          className="min-h-screen flex justify-center items-center"
-          style={{ backgroundColor: colors.background, color: colors.text }}
-        >
-          {/*Form */}
-          <section
-        className="py-24 px-6 w-full max-w-lg bg-card rounded-lg shadow-lg"
-        style={{ backgroundColor: colors.card}}
-      >
-        <main>
-          <h2 className="text-6xl font-semibold mb-6">Login</h2>
-          <h4 className="text-3xl font-semibold mb-6" style={{ color: colors.mutedText }}>Welcome to TariffCalc Pro</h4>
-            <LoginForm>
-              <LoginInput>
-                Username or Email
-              </LoginInput>
-              <LoginInput>
-                Password
-              </LoginInput>
-            </LoginForm>
-          </main>
-        
-      </section>
-          
+export default function LoginPage() {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: colors.background, color: colors.text }}
+    >
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-2xl font-bold text-foreground"
+          >
+            <Calculator className="h-8 w-8 text-primary" />
+            TariffCalc Pro
+          </Link>
+          <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
-    )
+        <Card>
+          <CardContent>
+            <LoginForm>
+              <LoginInput>Email</LoginInput>
+              <LoginInput>Password</LoginInput>
+            </LoginForm>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
