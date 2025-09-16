@@ -37,3 +37,7 @@ export function CardDescription({ children, className = "" }) {
     </p>
   );
 }
+
+export function CardContent({ children, className = "" }) {
+  return <div className={`mb-4 ${className}`}>{children}</div>;
+}
