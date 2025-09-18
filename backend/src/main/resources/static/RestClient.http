@@ -12,6 +12,7 @@ Content-Type: application/json
 {
   "name": "hahu"
 }
+
 ###
 
-DELETE http://localhost:8080/api/students/delete/5
+DELETE http://localhost:8080/api/students/delete/6
