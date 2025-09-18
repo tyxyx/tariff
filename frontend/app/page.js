@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { colors } from "@/styles/colors";
-import { Calculator } from "lucide-react";
+import Header from "@/components/ui/header";
 
 export default function HomePage() {
   return (
@@ -16,28 +16,7 @@ export default function HomePage() {
       style={{ backgroundColor: colors.background, color: colors.text }}
     >
       {/* Header */}
-      <header
-        style={{ backgroundColor: colors.background, color: colors.text }}
-      >
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calculator className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold" style={{ color: colors.text }}>
-                TariffCalc Pro
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link href="/login">
-                <Button>Login</Button>
-              </Link>
-              {/* <Link href="/register">
-                <Button>Get Started</Button>
-              </Link> */}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header/>
 
       {/* Hero Section */}
       <section
