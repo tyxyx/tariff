@@ -1,0 +1,28 @@
+# Terraform state
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+
+# Crash log files
+crash.log
+
+# Exclude override files as they are usually used to override resources locally and so
+# are not checked in
+*.tfvars
+*.tfvars.json
+
+# Ignore plan output
+*.plan
+
+# Sensitive files
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Local execution files
+*.log
+
+# Ignore any editor/IDE files
+.idea/
+.vscode/
+.DS_Store

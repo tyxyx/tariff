@@ -1,9 +1,13 @@
-# services:
-#   postgres:
-#     image: 'postgres:latest'
-#     environment:
-#       - 'POSTGRES_DB=postgres'
-#       - 'POSTGRES_PASSWORD=r007_U53r'
-#       - 'POSTGRES_USER=postgres'
-#     ports:
-#       - '5432'
+services:
+  app:
+    image: 'tariffbackend:latest'
+    ports:
+      - "8080:8080"
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5432'
