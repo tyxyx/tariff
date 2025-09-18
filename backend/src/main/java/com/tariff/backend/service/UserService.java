@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.model.User;
 import com.tariff.backend.repository.UserRepository;
 
@@ -24,7 +25,7 @@ public class UserService {
   public void addUser(User user) {
     Optional<User> optionalUser =  userRepository.findUserByUsername(user.getUsername());
     if (optionalUser.isPresent()) {
-      throw new IllegalStateException("User already exists");
+      throw new BadRequestException(String.format("user %s already existed", user.getUsername()));
     }
     userRepository.save(user);
   }
