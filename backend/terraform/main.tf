@@ -106,7 +106,7 @@ resource "aws_instance" "app" {
   subnet_id                   = data.aws_subnets.default.ids[0]
   vpc_security_group_ids      = [aws_security_group.app_sg.id]
   associate_public_ip_address = true
-  key_name = var.key_name
+  # key_name = var.key_name
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   user_data                   = local.user_data
 
