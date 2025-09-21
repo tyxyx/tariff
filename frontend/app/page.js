@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { colors } from "@/styles/colors";
 import Header from "@/components/ui/header";
+import { Calculator, Shield, Users } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -16,13 +17,10 @@ export default function HomePage() {
       style={{ backgroundColor: colors.background, color: colors.text }}
     >
       {/* Header */}
-      <Header/>
+      <Header />
 
       {/* Hero Section */}
-      <section
-        className="py-20 px-4"
-        style={{ backgroundColor: colors.card}}
-      >
+      <section className="py-20 px-4" style={{ backgroundColor: colors.card }}>
         <div className="container mx-auto max-w-4xl text-center">
           <h2
             className="text-4xl md:text-6xl font-bold mb-6 text-balance"
@@ -35,8 +33,7 @@ export default function HomePage() {
             style={{ color: colors.mutedText }}
           >
             Professional tariff calculation platform for international trade.
-            Get accurate duty rates, manage product classifications, and
-            streamline your import/export operations.(edit ltr)
+            
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/login">
@@ -49,17 +46,21 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-16 px-4" style={{ backgroundColor: colors.background }}>
+      <section
+        className="py-16 px-4"
+        style={{ backgroundColor: colors.background }}
+      >
         <div className="container mx-auto max-w-6xl">
           <h3
             className="text-3xl font-bold text-center mb-12"
             style={{ color: colors.text }}
           >
-            Why Choose TariffCalc Pro?(edit as we implement more features)
+            Why Choose TariffCalc Pro?
           </h3>
           <div className="grid md:grid-cols-3 gap-8">
             <Card>
               <CardHeader>
+                <Calculator className="h-12 w-12 text-primary mb-4" />
                 <CardTitle>Accurate Calculations</CardTitle>
                 <CardDescription>
                   Real-time tariff rates with comprehensive product
@@ -69,6 +70,7 @@ export default function HomePage() {
             </Card>
             <Card>
               <CardHeader>
+                <Shield className="h-12 w-12 text-primary mb-4" />
                 <CardTitle>Secure & Reliable</CardTitle>
                 <CardDescription>
                   Enterprise-grade security with role-based access control and
@@ -78,9 +80,10 @@ export default function HomePage() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Team Management</CardTitle>
+                <Users className="h-12 w-12 text-primary mb-4" />
+                <CardTitle>Profile Management</CardTitle>
                 <CardDescription>
-                  Multi-user support with admin controls for managing tariff
+                  Admin controls for managing tariff
                   data and users
                 </CardDescription>
               </CardHeader>
