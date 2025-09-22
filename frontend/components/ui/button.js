@@ -17,8 +17,9 @@ export function Button({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        backgroundColor: isHovered ? colors.buttonHover : colors.buttonDark,
+        backgroundColor: isHovered ? colors.buttonDarkHover : colors.buttonDark,
         color: colors.buttonText,
+        border: isHovered ? "1px solid #a1a1aa" : "1px solid #fff",
       }}
       className={`px-4 py-2 rounded ${className}`}
     >
