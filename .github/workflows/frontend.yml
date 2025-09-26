@@ -61,7 +61,6 @@ jobs:
       with:
         images: ${{ secrets.DOCKER_USERNAME }}/tarifffrontend
         tags: |
-          type=branch
           type=sha
           type=raw,value=latest,enable={{is_default_branch}}
           type=pr
