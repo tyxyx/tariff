@@ -63,7 +63,6 @@ jobs:
         tags: |
           type=sha
           type=raw,value=latest,enable={{is_default_branch}}
-          type=pr
     
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
