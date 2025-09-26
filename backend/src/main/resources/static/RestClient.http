@@ -16,3 +16,23 @@ Content-Type: application/json
 ###
 
 DELETE http://localhost:8080/api/students/delete/6
+
+### Register a New User
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "strongpassword123"
+}
+
+### Log in an Existing User
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "strongpassword123"
+}
+
+GET http://localhost:8080/api/users/
