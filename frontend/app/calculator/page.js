@@ -66,9 +66,8 @@ export default function CalculatorPage() {
     }
   }, [startDate, endDate]);
 
-  // Calculate costs (anyhow now)
-  const totalImportCost = quantity * unitPrice * (1 + tariffRate);
-  const totalExportEarnings = quantity * unitPrice;
+  // Calculate tariff amount
+  const tariffAmount = quantity * unitPrice * (tariffRate);
 
   return (
     <div
@@ -241,15 +240,9 @@ export default function CalculatorPage() {
                 <strong>Tariff Rate:</strong> {tariffRate ? `${(tariffRate * 100).toFixed(2)}%` : "-"}
               </li>
               <li>
-                <strong>Total Import Cost:</strong>{" "}
+                <strong>Tariff Amount:</strong>{" "}
                 {product && importCountry && exportCountry && quantity && unitPrice
-                  ? `$${totalImportCost.toLocaleString()}`
-                  : "-"}
-              </li>
-              <li>
-                <strong>Total Export Earnings:</strong>{" "}
-                {product && importCountry && exportCountry && quantity && unitPrice
-                  ? `$${totalExportEarnings.toLocaleString()}`
+                  ? `$${tariffAmount.toLocaleString()}`
                   : "-"}
               </li>
             </ul>
