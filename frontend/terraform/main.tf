@@ -29,7 +29,8 @@ data "aws_ami" "al2023" {
   }
 }
 
-resource "aws_security_group" "backend_sg" {
+
+resource "aws_security_group" "frontend_sg" {
   name        = "${var.name}-sg"
   description = "Allow SSH and app traffic"
   vpc_id      = data.aws_vpc.default.id
@@ -57,66 +58,50 @@ resource "aws_security_group" "backend_sg" {
   }
 }
 
-# (Optional) IAM role to read from ECR. Keep if using ECR; safe otherwise.
-
-# Use existing IAM instance profile
-# data "aws_iam_instance_profile" "existing" {
-#   name = "terraform-admin"
-# }
-
-# User data pulls and runs your container
+# User data pulls and runs your frontend container
 locals {
   user_data = <<-EOF
     #!/bin/bash
     set -eux
 
-    sudo dnf update -y 
-    sudo dnf install -y docker
-    sudo systemctl enable --now docker
-    sudo usermod -aG docker ec2-user
+    dnf update -y
+    dnf install -y docker
+    systemctl enable --now docker
+    usermod -aG docker ec2-user
+
     # Pull & run
-    sudo docker pull ${var.image_name}:${var.image_tag}
-    sudo docker stop ${var.name} || true
-    sudo docker rm ${var.name} || true
+    docker pull ${var.image}
+    docker stop ${var.name} || true
+    docker rm ${var.name} || true
 
-    # Remove in prod
-    # sudo docker pull postgres:latest
-    
-    #remove in prod
-    # sudo docker run -d \
-    #   --name postgres-container \
-    #   -e POSTGRES_DB=mydatabase \
-    #   -e POSTGRES_PASSWORD=secret \
-    #   -e POSTGRES_USER=myuser \
-    #   -p 5432:5432 \
-    #   postgres:latest
-
-    # Example: expose ${var.host_port}->${var.container_port} and pass envs
-    sudo docker run -d --name ${var.name} -p ${var.host_port}:${var.container_port} \
+    # Run Next.js frontend container
+    docker run -d --name ${var.name} -p ${var.host_port}:${var.container_port} \
       --restart unless-stopped \
       ${join(" ", [for k,v in var.env : "--env \"${k}=${v}\""])} \
-      ${var.image_name}:${var.image_tag}
+      ${var.image}
   EOF
 }
+
+resource "aws_instance" "frontend" {
+  ami                         = data.aws_ami.al2023.id
+  instance_type               = var.instance_type
+  subnet_id                   = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids      = [aws_security_group.frontend_sg.id]
+  associate_public_ip_address = true
+  key_name                    = var.key_name
+  user_data                   = local.user_data
+  tags = { Name = var.name }
+}
+
 data "aws_eip" "existing" {
   public_ip = var.elastic_ip  # Or use id = var.elastic_ip_id if you have the allocation ID
 }
 
-resource "aws_instance" "backend" {
-  ami                         = data.aws_ami.al2023.id
-  instance_type               = var.instance_type
-  subnet_id                   = data.aws_subnets.default.ids[0]
-  vpc_security_group_ids      = [aws_security_group.backend_sg.id]
-  associate_public_ip_address = true
-  key_name                    = var.key_name
-  user_data                   = local.user_data
-
-  tags = { Name = var.name }
-}
-resource "aws_eip_association" "backend_eip_assoc" {
-  instance_id   = aws_instance.backend.id
+resource "aws_eip_association" "app_eip_assoc" {
+  instance_id   = aws_instance.frontend.id
   allocation_id = data.aws_eip.existing.id
 }
 
-output "public_ip"   { value = aws_instance.backend.public_ip }
-output "backend_url" { value = "http://${aws_instance.backend.public_ip}:${var.host_port}" }
+
+output "public_ip"   { value = aws_instance.frontend.public_ip }
+output "frontend_url" { value = "http://${data.aws_eip.existing.public_ip}:${var.host_port}" }

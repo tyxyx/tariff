@@ -1,0 +1,79 @@
+name: CI Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        required: true
+        type: string
+      node-version:
+        required: false
+        type: string
+        default: '18'
+      java-version:
+        required: false
+        type: string
+        default: '21'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    # Node.js setup (if node-version is provided and no java-version)
+    - name: Setup Node.js
+      if: ${{ inputs.node-version && !inputs.java-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+    
+    # Java setup (if java-version is provided)
+    - name: Setup Java
+      if: ${{ inputs.java-version }}
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: ${{ inputs.java-version }}
+    
+    # Node.js steps
+    - name: Install Node dependencies
+      if: ${{ inputs.node-version && !inputs.java-version }}
+      run: |
+        cd ${{ inputs.working-directory }}
+        npm install
+    
+    - name: Run Node tests
+      if: ${{ inputs.node-version && !inputs.java-version }}
+      run: |
+        cd ${{ inputs.working-directory }}
+        npm test
+    
+    - name: Build Node app
+      if: ${{ inputs.node-version && !inputs.java-version }}
+      run: |
+        cd ${{ inputs.working-directory }}
+        npm run build
+    
+    # Java/SpringBoot steps
+    - name: Cache Maven dependencies
+      if: ${{ inputs.java-version }}
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    
+    - name: Make mvnw executable
+      if: ${{ inputs.java-version }}
+      run: chmod +x ./backend/mvnw
+    
+    - name: Run Java tests
+      if: ${{ inputs.java-version }}
+      run: ./mvnw test
+      working-directory: ./backend
+    
+    - name: Build Java app
+      if: ${{ inputs.java-version }}
+      run: ./mvnw clean package -DskipTests
+      working-directory: ./backend

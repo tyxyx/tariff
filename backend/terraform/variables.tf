@@ -12,7 +12,7 @@ variable "instance_type"  {
 }
 variable "key_name"       {
   type = string
-  default = "springbootKeypair"
+  default = "backEndKeyPair"
 } # existing EC2 key pair
 variable "ssh_cidrs"      {
   type = list(string)
@@ -20,9 +20,14 @@ variable "ssh_cidrs"      {
 }
 
 # Container config
-variable "image"          {
+variable "image_name"          {
     type = string
-    default = "docker.io/wzinl/tariffbackend:latest" # Replace with your image
+    default = "docker.io/wzinl/tariffbackend" 
+}
+
+variable "image_tag"          {
+    type = string
+    default = "latest"
 }
 
 variable "container_port" {
@@ -37,4 +42,29 @@ variable "host_port"      {
 variable "env"            {
     type = map(string)
     default = {}
+}
+
+variable "elastic_ip"          {
+    type = string
+    default = "18.139.89.63"
+}
+
+
+variable "docker_compose" {
+      type = string
+      default =  <<EOF
+services:
+  app:
+    image: 'wzinl/tariffbackend:latest'
+    ports:
+      - "8080:8080"
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5432'
+  EOF
 }
