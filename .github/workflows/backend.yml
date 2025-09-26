@@ -1,0 +1,28 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/cipipeline.yml
+    with:
+      working-directory: 'backend'
+      java-version: '17'
+  
+  docker:
+    needs: ci
+    uses: ./.github/workflows/dockerBuildPush.yml
+    with:
+      context: './backend'
+      image-name: 'tariffbackend'
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
