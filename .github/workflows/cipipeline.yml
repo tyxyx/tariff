@@ -13,7 +13,7 @@ on:
       java-version:
         required: false
         type: string
-        default: '17'
+        default: '21'
 
 jobs:
   ci:
@@ -64,14 +64,16 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
     
+    - name: Make mvnw executable
+      if: ${{ inputs.java-version }}
+      run: chmod +x ./backend/mvnw
+    
     - name: Run Java tests
       if: ${{ inputs.java-version }}
-      run: |
-        cd ${{ inputs.working-directory }}
-        ./mvnw test
+      run: ./mvnw test
+      working-directory: ./backend
     
     - name: Build Java app
       if: ${{ inputs.java-version }}
-      run: |
-        cd ${{ inputs.working-directory }}
-        ./mvnw clean package -DskipTests
+      run: ./mvnw clean package -DskipTests
+      working-directory: ./backend
