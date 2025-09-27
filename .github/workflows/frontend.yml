@@ -87,6 +87,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-frontend.yml
     with:
-      docker_image_tag: latest
+      docker_image_tag: ${{ needs.docker.outputs.image-tag }}
       environment: production
     secrets: inherit

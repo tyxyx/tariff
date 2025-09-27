@@ -25,7 +25,7 @@ jobs:
         username: ${{ secrets.BACKEND_EC2_USER }}
         key: ${{ secrets.BACKEND_EC2_SSH_KEY }}
         script: |
-          # Pull the latest image
+          # Pull the image
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend:${{ inputs.docker_image_tag }}
           cd ~
           # Stop existing services
