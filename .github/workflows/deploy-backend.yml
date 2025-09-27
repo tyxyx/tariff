@@ -26,6 +26,7 @@ jobs:
         key: ${{ secrets.BACKEND_EC2_SSH_KEY }}
         script: |
           # Pull the image
+          docker image prune -a -f
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend:${{ inputs.docker_image_tag }}
           cd ~
           # Stop existing services

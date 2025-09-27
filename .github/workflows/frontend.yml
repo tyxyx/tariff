@@ -40,10 +40,6 @@ jobs:
       run: npm run lint
       working-directory: ./frontend
     
-    # Uncomment when you add tests
-    # - name: Run tests
-    #   run: npm test
-    #   working-directory: ./frontend
 
   docker:
     needs: ci

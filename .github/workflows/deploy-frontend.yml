@@ -25,6 +25,7 @@ jobs:
         username: ${{ secrets.FRONTEND_EC2_USER }}
         key: ${{ secrets.FRONTEND_EC2_SSH_KEY }}
         script: |
+          docker image prune -a -f
           # Pull the latest image
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}
           cd ~
