@@ -30,9 +30,9 @@ jobs:
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
+        host: ${{ secrets.FRONTEND_EC2_HOST }}
+        username: ${{ secrets.FRONTEND_EC2_USER }}
+        key: ${{ secrets.FRONTEND_EC2_SSH_KEY }}
         script: |
           # Set the image tag environment variable
           export IMAGE_TAG=${{ inputs.docker_image_tag }}
