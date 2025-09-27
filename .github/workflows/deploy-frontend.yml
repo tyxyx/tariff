@@ -12,15 +12,6 @@ on:
         type: string
         default: 'production'
         description: 'Deployment environment'
-    secrets:
-      DOCKER_USERNAME:
-        required: true
-      FRONTEND_EC2_HOST:
-        required: true
-      FRONTEND_EC2_USER:
-        required: true
-      FRONTEND_EC2_SSH_KEY:
-        required: true
 
 jobs:
   deploy:

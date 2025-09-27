@@ -12,15 +12,6 @@ on:
         type: string
         default: 'production'
         description: 'Deployment environment'
-    secrets:
-      DOCKER_USERNAME:
-        required: true
-      BACKEND_EC2_HOST:
-        required: true
-      BACKEND_EC2_USER:
-        required: true
-      BACKEND_EC2_SSH_KEY:
-        required: true
 
 jobs:
   deploy:
@@ -28,7 +19,7 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
     - name: Deploy to EC2
-      uses: appleboy/ssh-action@v1.0.3
+      uses: appleboy/ssh-action@v1.2.2
       with:
         host: ${{ secrets.BACKEND_EC2_HOST }}
         username: ${{ secrets.BACKEND_EC2_USER }}

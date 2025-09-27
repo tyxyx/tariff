@@ -97,8 +97,4 @@ jobs:
     with:
       docker_image_tag: latest
       environment: production
-    secrets:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      BACKEND_EC2_HOST: ${{ secrets.BACKEND_EC2_HOST }}
-      BACKEND_EC2_USER: ${{ secrets.BACKEND_EC2_USER }}
-      BACKEND_EC2_SSH_KEY: ${{ secrets.BACKEND_EC2_SSH_KEY }}
+    secrets: inherit
