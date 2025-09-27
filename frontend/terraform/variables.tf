@@ -24,9 +24,14 @@ variable "ssh_cidrs" {
 }
 
 # Container config
-variable "image" {
+variable "image_name" {
   type    = string
-  default = "docker.io/wzinl/tarifffrontend:latest" # Replace with your Docker Hub image
+  default = "docker.io/wzinl/tarifffrontend" # Replace with your Docker Hub image
+}
+
+variable "image_tag" {
+  type    = string
+  default = "latest"
 }
 
 variable "container_port" {
@@ -36,7 +41,7 @@ variable "container_port" {
 
 variable "host_port" {
   type    = number
-  default = 80
+  default = 3000
 }
 
 variable "env" {
@@ -45,6 +50,21 @@ variable "env" {
     NODE_ENV = "production"
     # Add any other environment variables your Next.js app needs
   }
+}
+
+variable "ssh_key_path" {
+    type = string
+    default = "../../frontEndKeyPair.pem"
+}
+
+variable "compose_file_path" {
+    type = string
+    default = "../compose.yaml"
+}
+
+variable "env_file_path" {
+    type = string
+    default = "../.env.local"
 }
 
 variable "elastic_ip" {

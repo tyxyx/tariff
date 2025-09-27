@@ -19,13 +19,13 @@ data "aws_subnets" "default" {
   }
 }
 
-# Latest Amazon Linux 2023
-data "aws_ami" "al2023" {
+# Latest Ubuntu 22.04 LTS
+data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["137112412989"] # Amazon
+  owners      = ["099720109477"] # Canonical
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
   }
 }
 
@@ -58,32 +58,38 @@ resource "aws_security_group" "frontend_sg" {
   }
 }
 
-# User data pulls and runs your frontend container
+# User data installs Docker, Docker Compose and runs the application
 locals {
+  # Read the original compose.yaml file
+  
   user_data = <<-EOF
     #!/bin/bash
     set -eux
 
-    dnf update -y
-    dnf install -y docker
-    systemctl enable --now docker
-    usermod -aG docker ec2-user
-
-    # Pull & run
-    docker pull ${var.image}
-    docker stop ${var.name} || true
-    docker rm ${var.name} || true
-
-    # Run Next.js frontend container
-    docker run -d --name ${var.name} -p ${var.host_port}:${var.container_port} \
-      --restart unless-stopped \
-      ${join(" ", [for k,v in var.env : "--env \"${k}=${v}\""])} \
-      ${var.image}
+    # Update package index
+    sudo apt-get update -y
+    
+    # Install Docker
+    sudo apt-get install -y ca-certificates curl gnupg lsb-release
+    sudo mkdir -p /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update -y
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    
+    # Start Docker and enable it to start on boot
+    sudo systemctl enable --now docker
+    sudo usermod -aG docker ubuntu
+    sudo docker pull ${var.image_name}:${var.image_tag}
+    
+    # Start the application using Docker Compose
+    cd /home/ubuntu
+    sudo docker compose -f compose.yaml up -d
   EOF
 }
 
 resource "aws_instance" "frontend" {
-  ami                         = data.aws_ami.al2023.id
+  ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
   subnet_id                   = data.aws_subnets.default.ids[0]
   vpc_security_group_ids      = [aws_security_group.frontend_sg.id]
@@ -91,17 +97,39 @@ resource "aws_instance" "frontend" {
   key_name                    = var.key_name
   user_data                   = local.user_data
   tags = { Name = var.name }
+
+  provisioner "file" {
+    source      = var.compose_file_path
+    destination = "/home/ubuntu/compose.yaml"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu" # Or appropriate user for your AMI
+      private_key = file(var.ssh_key_path) # Path to your private key
+      host        = self.public_ip # Or self.private_ip if accessing privately
+    }
+  }
+  provisioner "file" {
+    source      = var.env_file_path
+    destination = "/home/ubuntu/.env.local"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu" # Or appropriate user for your AMI
+      private_key = file(var.ssh_key_path) # Path to your private key
+      host        = self.public_ip # Or self.private_ip if accessing privately
+    }
+  }
+  
 }
 
 data "aws_eip" "existing" {
   public_ip = var.elastic_ip  # Or use id = var.elastic_ip_id if you have the allocation ID
 }
 
-resource "aws_eip_association" "app_eip_assoc" {
+resource "aws_eip_association" "frontend_eip_assoc" {
   instance_id   = aws_instance.frontend.id
   allocation_id = data.aws_eip.existing.id
 }
 
 
-output "public_ip"   { value = aws_instance.frontend.public_ip }
-output "frontend_url" { value = "http://${data.aws_eip.existing.public_ip}:${var.host_port}" }
+output "public_ip"   { value = var.elastic_ip }
+output "frontend_url" { value = "http://${var.elastic_ip}:${var.host_port}" }

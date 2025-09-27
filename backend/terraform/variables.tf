@@ -49,22 +49,17 @@ variable "elastic_ip"          {
     default = "18.139.89.63"
 }
 
+variable "ssh_key_path" {
+    type = string
+    default = "../../backEndKeyPair.pem"
+}
 
-variable "docker_compose" {
-      type = string
-      default =  <<EOF
-services:
-  app:
-    image: 'wzinl/tariffbackend:latest'
-    ports:
-      - "8080:8080"
-  postgres:
-    image: 'postgres:latest'
-    environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
-    ports:
-      - '5432'
-  EOF
+variable "compose_file_path" {
+    type = string
+    default = "../compose.yaml"
+}
+
+variable "env_file_path" {
+    type = string
+    default = "../.env"
 }
