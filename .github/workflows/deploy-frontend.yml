@@ -41,7 +41,6 @@ jobs:
           docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}
           
           # Navigate to the directory with compose file
-          cd /path/to/your/compose/directory
           
           # Stop existing services
           docker-compose down || true
