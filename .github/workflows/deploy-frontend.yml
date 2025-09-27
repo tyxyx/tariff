@@ -15,11 +15,11 @@ on:
     secrets:
       DOCKER_USERNAME:
         required: true
-      EC2_HOST:
+      FRONTEND_EC2_HOST:
         required: true
-      EC2_USER:
+      FRONTEND_EC2_USER:
         required: true
-      EC2_SSH_KEY:
+      FRONTEND_EC2_SSH_KEY:
         required: true
 
 jobs:
