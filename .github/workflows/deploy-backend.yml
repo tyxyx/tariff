@@ -32,7 +32,7 @@ jobs:
           docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend:${{ inputs.docker_image_tag }}
           
           # Stop existing services
-          docker-compose down || true
+          docker compose down || true
           
           # Start services with new image tag
-          IMAGE_TAG=${{ inputs.docker_image_tag }} docker-compose up -d
+          IMAGE_TAG=${{ inputs.docker_image_tag }} docker compose up -d
