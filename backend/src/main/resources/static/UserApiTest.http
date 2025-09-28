@@ -1,0 +1,16 @@
+GET http://localhost:8080/api/users/
+
+###
+
+POST http://localhost:8080/api/users/add
+Content-Type: application/json
+
+{
+  "username": "hau",
+  "email": "rayner@alarm.com",
+  "password": "aosdjfpoqiwenr oij "
+}
+
+###
+
+DELETE http://localhost:8080/api/users/delete/10
