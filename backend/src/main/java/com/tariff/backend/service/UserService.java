@@ -1,13 +1,11 @@
 package com.tariff.backend.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.model.User;
 import com.tariff.backend.repository.UserRepository;
 
@@ -48,14 +46,28 @@ public class UserService {
         return userRepository.save(newUser);
     }
 
-  public boolean loginUser(String email, String password) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
-       
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            return passwordEncoder.matches(password, user.getPassword());
+    public boolean loginUser(String email, String password) {
+      Optional<User> userOptional = userRepository.findByEmail(email);
+
+      if (userOptional.isPresent()) {
+        User user = userOptional.get();
+        return passwordEncoder.matches(password, user.getPassword());
+      }
+
+      return false;
+    }
+    
+    public boolean changePassword(String email, String password, String newPassword) {
+      Optional<User> userOptional = userRepository.findByEmail(email);
+
+      if (userOptional.isPresent()) {
+        User user = userOptional.get();
+        if (passwordEncoder.matches(password, user.getPassword())) {
+          user.setPassword(newPassword);
+          return true;
         }
-        
-        return false;
+      }
+
+      return false;
     }
 }
