@@ -2,3 +2,5 @@
 
 # Local .terraform directories
 **/.terraform/*
+backEndKeyPair.pem
+frontEndKeyPair.pem

@@ -29,7 +29,8 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-resource "aws_security_group" "backend_sg" {
+
+resource "aws_security_group" "frontend_sg" {
   name        = "${var.name}-sg"
   description = "Allow SSH and app traffic"
   vpc_id      = data.aws_vpc.default.id
@@ -86,15 +87,12 @@ locals {
     sudo docker compose -f compose.yaml up -d
   EOF
 }
-data "aws_eip" "existing" {
-  public_ip = var.elastic_ip  # Or use id = var.elastic_ip_id if you have the allocation ID
-}
 
-resource "aws_instance" "backend" {
+resource "aws_instance" "frontend" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
   subnet_id                   = data.aws_subnets.default.ids[0]
-  vpc_security_group_ids      = [aws_security_group.backend_sg.id]
+  vpc_security_group_ids      = [aws_security_group.frontend_sg.id]
   associate_public_ip_address = true
   key_name                    = var.key_name
   user_data                   = local.user_data
@@ -112,7 +110,7 @@ resource "aws_instance" "backend" {
   }
   provisioner "file" {
     source      = var.env_file_path
-    destination = "/home/ubuntu/.env"
+    destination = "/home/ubuntu/.env.local"
     connection {
       type        = "ssh"
       user        = "ubuntu" # Or appropriate user for your AMI
@@ -122,10 +120,16 @@ resource "aws_instance" "backend" {
   }
   
 }
-resource "aws_eip_association" "backend_eip_assoc" {
-  instance_id   = aws_instance.backend.id
+
+data "aws_eip" "existing" {
+  public_ip = var.elastic_ip  # Or use id = var.elastic_ip_id if you have the allocation ID
+}
+
+resource "aws_eip_association" "frontend_eip_assoc" {
+  instance_id   = aws_instance.frontend.id
   allocation_id = data.aws_eip.existing.id
 }
 
+
 output "public_ip"   { value = var.elastic_ip }
-output "backend_url" { value = "http://${var.elastic_ip}:${var.host_port}" }
+output "frontend_url" { value = "http://${var.elastic_ip}:${var.host_port}" }
