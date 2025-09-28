@@ -67,19 +67,27 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle>Change Password</CardTitle>
 
               <form>
                 <div style={{ marginBottom: 18 }}>
-                  <Input label="New Password" type="password" />
+                  <div style={{ marginBottom: 12 }}>
+                    <Input label="Email" />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <Input label="Current Password" type="password" />
+                  </div>
                   <p style={{ padding: "8px 0" }}>
-                    Password strength: Use at least 8 characters.
+                    Password strength: Use at least 6 characters.
                   </p>
-
-                  <Input label="Confirm Password" type="password" />
+                  <div style={{ marginBottom: 12 }}>
+                    <Input label="New Password" type="password" />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <Input label="Confirm Password" type="password" />
+                  </div>
                 </div>
                 <Button>Confirm Changes</Button>
               </form>
