@@ -48,7 +48,7 @@ public class UserController {
   // }
   @CrossOrigin(origins = "http://localhost:3000")
   @PostMapping("/register")
-   public ResponseEntity<Map<String, String>> registerUser(@RequestBody Map<String, String> payload) {
+   public ResponseEntity<User> registerUser(@RequestBody Map<String, String> payload) {
        String email = payload.get("email");
        String password = payload.get("password");
        // Basic validation
@@ -56,8 +56,8 @@ public class UserController {
            return ResponseEntity.badRequest().body(Map.of("message", "Email and password are required and password must be at least 6 characters."));
        }
        try {
-           userService.registerNewUser(email, password);
-           return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "User registered successfully!"));
+           User user =  userService.registerNewUser(email, password);
+           return ResponseEntity.created(null).body(user);
        } catch (IllegalStateException e) {
            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
        } catch (Exception e) {
