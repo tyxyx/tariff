@@ -9,6 +9,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -24,10 +28,18 @@ public class Tariff {
   private String HTSCode;
   private String originCountry;
   private String destCountry;
-  private LocalDate tariffEffectiveDate;
-  private LocalDate tariffExpiryDate;
-  private double tariffRate;
-  private String productName;
+  private LocalDate effectiveDate;
+  private LocalDate expiryDate;
+  private double rate;
+  private boolean enabled = true;
+  
+  @ManyToMany
+  @JoinTable(
+    name = "tariffProduct",
+    joinColumns = @JoinColumn(name = "tariff_id"),
+    inverseJoinColumns = @JoinColumn(name = "product_id")
+  )
+  private List<Product> products;
 
   // @OneToMany(mappedBy = "tariff", cascade = CascadeType.ALL)
   // private List<Product> products;
