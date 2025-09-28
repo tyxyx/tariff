@@ -42,22 +42,52 @@ export default function CalculatorPage() {
   const [calculationDate, setCalculationDate] = useState("");
   const [dateError, setDateError] = useState("");
 
-  function getTariffRate(product, originCountry, destCountry) {
-    // Replace ltrrrrrrrrrrrr
-    if (product && originCountry && destCountry) {
-      if (originCountry === destCountry) return 0;
-      if (product === "Laptops" && originCountry === "United States" && destCountry === "China") return 0.15;
-      return 0.10; // fixed for now~
+  // function getTariffRate(product, originCountry, destCountry) {
+  //   // Replace ltrrrrrrrrrrrr
+  //   if (product && originCountry && destCountry) {
+  //     if (originCountry === destCountry) return 0;
+  //     if (product === "Laptops" && originCountry === "United States" && destCountry === "China") return 0.15;
+  //     return 0.10; // fixed for now~
+  //   }
+  //   return 0;
+  // }
+
+  // useEffect(() => {
+  //   setTariffRate(getTariffRate(product, originCountry, destCountry));
+  // }, [product, originCountry, destCountry]);
+
+   useEffect(() => {
+    // Only call API if all fields are filled and calculationDate is valid
+    if (
+      product &&
+      originCountry &&
+      destCountry &&
+      calculationDate
+    ) {
+      // Format date as YYYY-MM-DD
+      const formattedDate = calculationDate.toISOString().split("T")[0];
+      fetch("http://localhost:8080/api/tariffs/get-particular-tariff-rate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: formattedDate,
+          originCountry,
+          destCountry,
+          productName: product,
+        }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          // Assume API returns { tariffRate: 0.15 }
+          setTariffRate(data.tariffRate ?? 0);
+        })
+        .catch(() => setTariffRate(0));
+    } else {
+      setTariffRate(0);
     }
-    return 0;
-  }
-
-  useEffect(() => {
-    setTariffRate(getTariffRate(product, originCountry, destCountry));
-  }, [product, originCountry, destCountry]);
-
-  // Date validation
-  // Replace ltr with validation info frm db
+  }, [product, originCountry, destCountry, calculationDate]);
 
   // Calculate tariff amount
   const tariffAmount = quantity * unitPrice * (tariffRate);
