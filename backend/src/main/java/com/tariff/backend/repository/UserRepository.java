@@ -9,6 +9,6 @@ import org.springframework.stereotype.Repository;
 import com.tariff.backend.model.User;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, String> {
   Optional<User> findByEmail(String email);
 }

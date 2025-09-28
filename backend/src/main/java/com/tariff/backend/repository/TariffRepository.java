@@ -1,6 +1,7 @@
 package com.tariff.backend.repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,15 +14,27 @@ import com.tariff.backend.model.Tariff;
 @Repository
 public interface TariffRepository extends JpaRepository<Tariff, UUID>{
   @Query("""
-      SELECT t FROM Tariff t 
-      WHERE t.productName = ?1
-      AND t.originCountry = ?3
-      AND t.destCountry = ?4
-      AND t.tariffEffectiveDate <= ?2
+      SELECT t FROM Tariff t
+      WHERE t.originCountry = :originCountry
+      AND t.destCountry = :destCountry
+      AND t.effectiveDate <= :targetDate
       AND (
-        t.tariffExpiryDate IS NULL
-        OR t.tariffExpiryDate >= ?2
+        t.expiryDate IS NULL
+        OR t.expiryDate >= :targetDate
       )
+      AND t.enabled
       """)
   Optional<Tariff> getTariffFromProductCountriesAndDates(String productName, LocalDate targetDate, String originCountry, String destCountry);
+
+  @Query("""
+      SELECT t FROM Tariff t
+      WHERE t.HTSCode = :htsCode
+      AND t.enabled
+      """)
+  List<Tariff> getTariffsByHtsCode(String htsCode);
+
+  @Query("""
+      SELECT t FROM Tariff t JOIN t.products p
+      """)
+  List<Tariff> listAll();
 }

@@ -1,4 +1,6 @@
 .DS_Store
 node_modules
 # Local .terraform directories
-.**/.terraform/*
+**/.terraform/*
+backEndKeyPair.pem
+frontEndKeyPair.pem
