@@ -40,6 +40,7 @@ public class UserController {
     // public void deleteUser(@PathVariable("userId") Long id) {
     //   userService.deleteUser(id);
     // }
+
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> registerUser(@RequestBody Map<String, String> payload) {

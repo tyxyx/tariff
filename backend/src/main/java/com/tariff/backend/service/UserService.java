@@ -63,7 +63,9 @@ public class UserService {
       if (userOptional.isPresent()) {
         User user = userOptional.get();
         if (passwordEncoder.matches(password, user.getPassword())) {
-          user.setPassword(newPassword);
+          String hashedNewPassword = passwordEncoder.encode(newPassword);
+          user.setPassword(hashedNewPassword);
+          userRepository.save(user);  
           return true;
         }
       }
