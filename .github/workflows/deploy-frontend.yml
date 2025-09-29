@@ -28,7 +28,7 @@ jobs:
           docker image prune -a -f
           # Pull the latest image
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}
-          cd ~
+          sudo echo "Pulled image: ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}" >> ~/deploy-frontend.log
           # Stop existing services
           sudo docker compose down || true
           
