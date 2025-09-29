@@ -32,7 +32,7 @@ export default function HomePage() {
             className="text-xl mb-8 max-w-2xl mx-auto"
             style={{ color: colors.mutedText }}
           >
-            Professional tariff calculation platform for international trade.
+            Professional tariff calculation platform for international trade
             
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
