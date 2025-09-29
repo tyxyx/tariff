@@ -26,7 +26,7 @@ jobs:
         key: ${{ secrets.BACKEND_EC2_SSH_KEY }}
         script: |
           # Pull the image
-          docker image prune -a -f
+          sudo docker image prune -a -f
           # sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend:${{ inputs.docker_image_tag }}
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend
           sudo echo "Pulled image: ${{ secrets.DOCKER_USERNAME }}/tariffbackend" >> ~/deploy-backend.log
