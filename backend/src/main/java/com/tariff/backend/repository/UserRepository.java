@@ -10,6 +10,5 @@ import com.tariff.backend.model.User;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-  @Query("SELECT s FROM User s WHERE s.username = ?1")
-  Optional<User> findUserByUsername(String username);
+  Optional<User> findByEmail(String email);
 }
