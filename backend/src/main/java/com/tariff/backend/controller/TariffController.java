@@ -42,12 +42,12 @@ public class TariffController {
     return ResponseEntity.ok().body(tariffService.getTariffsByHtsCode(htsCode));
   }
 
-  @GetMapping("/list")
+  @GetMapping()
   public ResponseEntity<List<Tariff>> listTariffs() {
     return ResponseEntity.ok().body(tariffService.listTariff());
   }
 
-  @PostMapping("/add") 
+  @PostMapping() 
   public ResponseEntity<String> addTariff(@Valid @RequestBody AddTariffDTO addTariffDTO) {
     tariffService.addTariff(addTariffDTO);
     return ResponseEntity.status(201).body("Tariff Created");
@@ -58,7 +58,7 @@ public class TariffController {
     return ResponseEntity.ok().body(tariffService.getParticularTariff(particularTariffDTO));
   }
 
-  @PutMapping("/update/{id}")
+  @PutMapping("/{id}")
   public ResponseEntity<Tariff> updateTariff(@PathVariable UUID id, @RequestBody Tariff newTariff) {
     return ResponseEntity.ok().body(tariffService.updateTariff(id, newTariff));
   }
