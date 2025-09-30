@@ -14,7 +14,7 @@ import com.tariff.backend.model.Tariff;
 @Repository
 public interface TariffRepository extends JpaRepository<Tariff, UUID>{
   @Query("""
-      SELECT t FROM Tariff t
+      SELECT t FROM Tariff t JOIN t.products p
       WHERE t.originCountry = :originCountry
       AND t.destCountry = :destCountry
       AND t.effectiveDate <= :targetDate
@@ -23,6 +23,7 @@ public interface TariffRepository extends JpaRepository<Tariff, UUID>{
         OR t.expiryDate >= :targetDate
       )
       AND t.enabled
+      AND p.name = :productName
       """)
   Optional<Tariff> getTariffFromProductCountriesAndDates(String productName, LocalDate targetDate, String originCountry, String destCountry);
 
