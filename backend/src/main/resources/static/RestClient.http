@@ -23,7 +23,7 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
-  "password": "strongpassword123"
+  "password": "strongPassword123"
 }
 
 ### Log in an Existing User
@@ -32,7 +32,7 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
-  "password": "strongpassword123"
+  "password": "strongPassword123"
 }
 
 ### Change Password for an Existing User
@@ -41,8 +41,8 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
-  "password": "strongpassword123",  
-  "newPassword": "newstrongpassword456"  // New password
+  "password": "strongPassword123",
+  "newPassword" : "Newstrongpassword456" 
 }
 
 

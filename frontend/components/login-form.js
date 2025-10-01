@@ -93,7 +93,6 @@ export function LoginInput({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        required
       />
     </div>
   );
