@@ -48,6 +48,7 @@ jobs:
           SPRING_DATASOURCE_URL: ${{ secrets.POSTGRES_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.POSTGRES_USER }}
           SPRING_DATASOURCE_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          FRONTEND_EC2_HOST: ${{ secrets.FRONTEND_EC2_HOST }}
 
       - name: Build application
         run: ./mvnw clean package -DskipTests
