@@ -40,28 +40,20 @@ public class TariffService {
     Optional<Tariff> existingTariff = getTariffsByHtsCode(addTariffDTO.getHtscode())
         .stream()
         .filter(tariff -> tariff.getOriginCountry().equals(addTariffDTO.getOriginCountry()) &&
-                          tariff.getDestCountry().equals(addTariffDTO.getDestCountry()))
+                          tariff.getDestCountry().equals(addTariffDTO.getDestCountry()) &&
+                          tariff.getHTSCode().equals(addTariffDTO.getHtscode()))
         .findFirst();
 
     if (existingTariff.isPresent()) {
-        throw new BadRequestException("A tariff with the same HTS code, origin, and destination already exists");
-    }
-
-    // Check for overlapping dates
-    boolean isOverlapping = tariffs.getTariffFromProductCountriesAndDates(
-        addTariffDTO.getHtscode(),
-        addTariffDTO.getEffectiveDate(),
-        addTariffDTO.getOriginCountry(),
-        addTariffDTO.getDestCountry()
-    ).isPresent() || tariffs.getTariffFromProductCountriesAndDates(
-        addTariffDTO.getHtscode(),
-        addTariffDTO.getExpiryDate(),
-        addTariffDTO.getOriginCountry(),
-        addTariffDTO.getDestCountry()
-    ).isPresent();
-
-    if (isOverlapping) {
-        throw new BadRequestException("New tariff has an overlap date with existing records");
+      Tariff t = existingTariff.get();
+      System.out.println(t.getExpiryDate());
+      if (t.getExpiryDate() != null && (
+        addTariffDTO.getEffectiveDate().isBefore(t.getExpiryDate()) || addTariffDTO.getEffectiveDate().equals(t.getExpiryDate())
+      )) {
+        throw new BadRequestException("New effective date must be " + t.getExpiryDate().plusDays(1) + " onwards");
+      }
+      t.setExpiryDate(addTariffDTO.getEffectiveDate().minusDays(1));
+      tariffs.save(t);
     }
 
     // Map AddTariffDTO to Tariff entity
@@ -91,12 +83,24 @@ public class TariffService {
   // 2. edit old tariff by id
   public Tariff updateTariff(UUID tariffId, Tariff newTariff) {    
     return tariffs.findById(tariffId).map(tariff -> {
-      tariff.setDestCountry(newTariff.getDestCountry());
-      tariff.setHTSCode(newTariff.getHTSCode());
-      tariff.setOriginCountry(newTariff.getOriginCountry());
-      tariff.setEffectiveDate(newTariff.getEffectiveDate());
-      tariff.setExpiryDate(newTariff.getExpiryDate());
-      tariff.setRate(newTariff.getRate());
+      if (newTariff.getDestCountry() != null) {
+        tariff.setDestCountry(newTariff.getDestCountry());
+      }
+      if (newTariff.getHTSCode() != null) {
+        tariff.setHTSCode(newTariff.getHTSCode());
+      }
+      if (newTariff.getOriginCountry() != null) {
+        tariff.setOriginCountry(newTariff.getOriginCountry());
+      }
+      if (newTariff.getEffectiveDate() != null) {
+        tariff.setEffectiveDate(newTariff.getEffectiveDate());
+      }
+      if (newTariff.getExpiryDate() != null) {
+        tariff.setExpiryDate(newTariff.getExpiryDate());
+      }
+      if (newTariff.getRate() > 0) {
+        tariff.setRate(newTariff.getRate());
+      }
       return tariffs.save(tariff);
     }).orElseThrow(() -> new NotFoundException("Tariff not found"));
   }

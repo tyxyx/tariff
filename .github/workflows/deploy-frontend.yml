@@ -25,12 +25,14 @@ jobs:
         username: ${{ secrets.FRONTEND_EC2_USER }}
         key: ${{ secrets.FRONTEND_EC2_SSH_KEY }}
         script: |
-          docker image prune -a -f
+          sudo docker image prune -a -f
           # Pull the latest image
-          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}
-          cd ~
+          # sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend
+          sudo echo "Pulled image: ${{ secrets.DOCKER_USERNAME }}/tarifffrontend" >> ~/deploy-frontend.log
           # Stop existing services
           sudo docker compose down || true
           
           # Start services with new image tag
-          sudo IMAGE_TAG=${{ inputs.docker_image_tag }} docker compose up -d
+          # sudo IMAGE_TAG=${{ inputs.docker_image_tag }} docker compose up -d
+          sudo docker compose up -d
