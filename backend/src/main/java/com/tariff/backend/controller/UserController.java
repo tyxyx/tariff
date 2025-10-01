@@ -2,7 +2,6 @@ package com.tariff.backend.controller;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -35,19 +34,19 @@ public class UserController {
         return this.userService.listUsers();
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
+    // @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/register")
     public User registerUser(@Valid @RequestBody UserRequestDTO.AddUserDto addUserDto) {
        return userService.addUser(addUserDto);
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
+    // @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/login")
     public User loginUser(@Valid @RequestBody UserRequestDTO.LoginDto loginDto) {
         return userService.loginUser(loginDto);
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
+    // @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping("/change-password")
     public User updatePassword(@Valid @RequestBody UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
         return userService.updatePassword(updatePasswordDto);
