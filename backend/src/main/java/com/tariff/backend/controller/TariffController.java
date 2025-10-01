@@ -48,7 +48,7 @@ public class TariffController {
   }
 // todo change to getmapping use req header/ params
   @PostMapping("/particular-tariff-rate")
-  public ResponseEntity<Tariff> getParticularTariffRate(@Valid @RequestBody ParticularTariffDTO particularTariffDTO) {
+  public ResponseEntity<Tariff> particularTariffRate(@Valid @RequestBody ParticularTariffDTO particularTariffDTO) {
     return ResponseEntity.ok().body(tariffService.getParticularTariff(particularTariffDTO));
   }
 
