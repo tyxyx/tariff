@@ -67,7 +67,7 @@ export default function CalculatorPage() {
       // Format date as YYYY-MM-DD
       const formattedDate = calculationDate.toISOString().split("T")[0];
       // TODO: change this to process.env
-      fetch(`http://18.139.89.63:8080/api/tariffs/get-particular-tariff-rate`, {
+      fetch(`http://18.139.89.63:8080/api/tariffs/particular-tariff-rate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
