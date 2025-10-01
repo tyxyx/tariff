@@ -21,6 +21,7 @@ export function LoginForm({ children, className = "" }) {
 
     try {
       const response = await fetch(
+        // TODO: change this to process.env
         `http://18.139.89.63:8080/api/users/login`,
         {
           method: "POST",
