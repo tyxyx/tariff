@@ -21,7 +21,7 @@ export function LoginForm({ children, className = "" }) {
 
     try {
       const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/login`,
+        `http://18.139.89.63:8080/api/users/login`,
         {
           method: "POST",
           headers: {
