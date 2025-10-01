@@ -23,7 +23,7 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
-  "password": "strongpassword123"
+  "password": "strongPassword123"
 }
 
 ### Log in an Existing User
@@ -32,7 +32,28 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
+  "password": "strongPassword123"
+}
+
+### Change Password for an Existing User
+POST http://localhost:8080/api/users/change-password
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "strongPassword123",
+  "newPassword" : "Newstrongpassword456" 
+}
+
+
+### Update Existing User
+POST http://localhost:8080/api/users/login/
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
   "password": "strongpassword123"
 }
 
 GET http://localhost:8080/api/users/
+

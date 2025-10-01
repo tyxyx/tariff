@@ -1,61 +1,83 @@
 package com.tariff.backend.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.tariff.backend.exception.BadRequestException;
+import com.tariff.backend.dto.UserRequestDTO;
+import com.tariff.backend.exception.user.UserAlreadyExistsException;
+import com.tariff.backend.exception.user.UserNotFoundException;
+import com.tariff.backend.exception.user.InvalidCredentialsException;
 import com.tariff.backend.model.User;
 import com.tariff.backend.repository.UserRepository;
+
+
 
 @Service
 public class UserService {
   private final UserRepository userRepository;
   private final BCryptPasswordEncoder passwordEncoder;
 
-  public UserService(UserRepository userRepository) {
+  public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
-    this.passwordEncoder = new BCryptPasswordEncoder();
+    this.passwordEncoder = passwordEncoder;
   }
 
   public List<User> listUsers() {
     return userRepository.findAll();
   }
 
-  // public void deleteUser(long id) {
-  //   boolean exist = userRepository.existsById(id);
-  //   if (!exist) {
-  //     throw new IllegalStateException("User not exists");
-  //   }
-  //   userRepository.deleteById(id);
-  // }
+  private String hashPassword(String password) {
+    return passwordEncoder.encode(password);
+  }
 
-   public User registerNewUser(String email, String password) {
-        // Check if user already exists
-        Optional<User> existingUser = userRepository.findByEmail(email);
-        if (existingUser.isPresent()) {
-            throw new IllegalStateException("A user with this email already exists.");
-        }
+  private void checkPasswordMatch(String rawPassword, String storedPassword) {
+    if (!passwordEncoder.matches(rawPassword, storedPassword)) {
+        throw new InvalidCredentialsException("Invalid email or password. Please try again.");
+    }
+  }
 
-        // Hash the password
-        String hashedPassword = passwordEncoder.encode(password);
-        
-        // Create and save the new user
-        User newUser = new User(email, hashedPassword);
+
+  private void checkPasswordStrength(String password) {
+    if (!(password.length() >= 6 && password.matches(".*[A-Z].*") && password.matches(".*\\d.*"))) {
+      throw new IllegalArgumentException("Password must be at least 8 characters long, contain an uppercase letter and a number.");
+    }
+  }
+
+  public User addUser(UserRequestDTO.AddUserDto addUserDto) {
+        userRepository.findByEmail(addUserDto.email()).ifPresent(user -> {
+            throw new UserAlreadyExistsException("A user with this email already exists.");
+        });
+
+        checkPasswordStrength(addUserDto.password());
+        User newUser = new User(addUserDto.email(), hashPassword(addUserDto.password()));
         return userRepository.save(newUser);
     }
+  
+  @Transactional(rollbackFor = Exception.class)
+  public User loginUser(UserRequestDTO.LoginDto loginDto) {
+    // Check if user already exists
+    User user = this.userRepository.findByEmail(loginDto.email()).orElseThrow(() -> {
+      return new UserNotFoundException("We couldn't find an account with that email. Please check your details.");}
+    );
 
-  public boolean loginUser(String email, String password) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
-       
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            return passwordEncoder.matches(password, user.getPassword());
-        }
-        
-        return false;
-    }
-}
+    checkPasswordMatch(loginDto.password(), user.getPassword());
+    return user;
+  }
+  
+  public User updatePassword(UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
+    // Check if user already exists
+    User user = this.userRepository.findByEmail(updatePasswordDto.email()).orElseThrow(() -> {
+      return new UserNotFoundException("User not found with email: " + updatePasswordDto.email());}
+    );
+
+    checkPasswordMatch(updatePasswordDto.password(), user.getPassword());
+    checkPasswordStrength(updatePasswordDto.newPassword());
+
+    user.setPassword(hashPassword(updatePasswordDto.newPassword()));
+    return this.userRepository.save(user);
+  }
+
+} 
