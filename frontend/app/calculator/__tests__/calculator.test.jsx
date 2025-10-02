@@ -1,19 +1,8 @@
-const CalculatorPage = require('../page').default;
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import CalculatorPage from '../page';
 
-let render;
-let screen;
-let waitFor;
-let within;
-let userEvent;
-
-let hasTestingLibrary = true;
-
-try {
-  ({ render, screen, waitFor, within } = require('@testing-library/react'));
-  userEvent = require('@testing-library/user-event').default;
-} catch (error) {
-  hasTestingLibrary = false;
-}
+jest.mock('@/components/ui/PageHeader', () => () => <div data-testid="page-header" />);
 
 jest.mock('react-datepicker', () => ({
   __esModule: true,
@@ -34,22 +23,22 @@ jest.mock('react-datepicker', () => ({
   },
 }));
 
-const ORIGINAL_ENV = process.env;
+const ORIGINAL_ENV = { ...process.env };
 const originalFetch = global.fetch;
 
 const findSummaryItem = (summary, text) => within(summary).getByText((content, element) => {
   return element.tagName.toLowerCase() === 'li' && element.textContent === text;
 });
 
-const describeIfAvailable = hasTestingLibrary ? describe : describe.skip;
-
-describeIfAvailable('CalculatorPage', () => {
+describe('CalculatorPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...ORIGINAL_ENV };
+    localStorage.setItem('userEmail', 'test@example.com');
   });
 
   afterEach(() => {
+    localStorage.clear();
     if (originalFetch) {
       global.fetch = originalFetch;
     } else {
@@ -77,7 +66,7 @@ describeIfAvailable('CalculatorPage', () => {
     process.env = { ...process.env, NEXT_PUBLIC_API_URL: 'http://mock.api' };
 
     const mockFetch = jest.fn().mockResolvedValue({
-      json: () => Promise.resolve({ tariffRate: 0.2 }),
+      json: () => Promise.resolve({ tariffRate: 0.2, rate: 0.2 }),
     });
     global.fetch = mockFetch;
 
@@ -102,7 +91,7 @@ describeIfAvailable('CalculatorPage', () => {
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe('http://mock.api/api/tariffs/get-particular-tariff-rate');
+    expect(url).toBe('http://18.139.89.63:8080/api/tariffs/particular-tariff-rate');
     expect(options).toMatchObject({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
