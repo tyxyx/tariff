@@ -41,6 +41,7 @@ export function LoginForm({ children, className = "" }) {
 
       if (response.ok) {
         setSuccess(data.message || "Login successful!");
+        localStorage.setItem("userEmail", email);
         router.push("/dashboard");
       }
 
