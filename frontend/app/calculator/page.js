@@ -214,7 +214,7 @@ export default function CalculatorPage() {
           <CardHeader>
             <CardTitle>Tariff Summary</CardTitle>
             <CardDescription>
-              See your calculated costs and earnings.
+              See your calculated costs.
             </CardDescription>
           </CardHeader>
           <CardContent>
