@@ -11,20 +11,7 @@ import { Calculator, Settings, Users, User, History, Map } from "lucide-react";
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
-  //   const { user, logout } = useAuth();
-  //   const router = useRouter();
-
-  //   // Redirect if not authenticated
-  //   if (!user) {
-  //     router.push("/login");
-  //     return null;
-  //   }
-
-  //   const handleLogout = () => {
-
-  //     logout();
-  //     router.push("/");
-  //   };
+  
 
   return (
     <div
@@ -60,7 +47,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Calculation History */}
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          {/* <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <History className="h-12 w-12 text-primary mb-4" />
               <CardTitle>Calculation History</CardTitle>
@@ -75,7 +62,7 @@ export default function DashboardPage() {
                 </Button>
               </Link>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Tariff Heatmap */}
           {/* <Card className="hover:shadow-lg transition-shadow cursor-pointer">

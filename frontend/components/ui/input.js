@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { colors } from "@/styles/colors";
-export function Input({ label, type = "text", id }) {
-  const [value, setValue] = useState("");
+
+export function Input({ label, type = "text", id, value, onChange }) {
   const [focused, setFocused] = useState(false);
 
-  const isActive = focused || value.length > 0;
+  const isActive = focused || (value && value.length > 0);
 
   const wrapperStyle = {
-      position: "relative",
-      
+    position: "relative",
   };
 
   const inputStyle = {
@@ -23,11 +22,10 @@ export function Input({ label, type = "text", id }) {
     left: isActive ? 8 : 16,
     top: isActive ? -5 : 10,
     padding: "0 4px",
-    backgroundColor: "#fff",
+    backgroundColor: colors.buttonDark,
+    color: colors.cardMuted,
     fontSize: isActive ? 14 : 16,
     lineHeight: 1,
-    backgroundColor:colors.buttonDark,
-    color: colors.cardMuted,
     transition: "all 0.15s ease-out",
     pointerEvents: "none",
   };
@@ -41,7 +39,7 @@ export function Input({ label, type = "text", id }) {
         value={value}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={onChange}
       />
       <label htmlFor={id} style={labelStyle}>
         {label}

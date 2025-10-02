@@ -41,6 +41,7 @@ export function LoginForm({ children, className = "" }) {
 
       if (response.ok) {
         setSuccess(data.message || "Login successful!");
+        localStorage.setItem("userEmail", email);
         router.push("/dashboard");
       }
 
@@ -84,7 +85,7 @@ export function LoginForm({ children, className = "" }) {
 }
 
 export function LoginInput({
-  children,
+  label,
   value,
   onChange,
   type = "text",
@@ -92,7 +93,7 @@ export function LoginInput({
 }) {
   return (
     <div className={` flex flex-col ${className}`}>
-      <label className="mb-2">{children}</label>
+      <label className="mb-2">{label}</label>
       <input
         className="p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
         type={type}

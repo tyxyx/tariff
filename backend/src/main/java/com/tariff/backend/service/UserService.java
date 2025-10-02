@@ -35,13 +35,13 @@ public class UserService {
 
   private void checkPasswordMatch(String rawPassword, String storedPassword) {
     if (!passwordEncoder.matches(rawPassword, storedPassword)) {
-        throw new InvalidCredentialsException("Invalid email or password. Please try again.");
+        throw new InvalidCredentialsException("Invalid password. Please try again.");
     }
   }
 
 
   private void checkPasswordStrength(String password) {
-    if (!(password.length() >= 6 && password.matches(".*[A-Z].*") && password.matches(".*\\d.*"))) {
+    if (!(password.length() >= 8 && password.matches(".*[A-Z].*") && password.matches(".*\\d.*"))) {
       throw new IllegalArgumentException("Password must be at least 8 characters long, contain an uppercase letter and a number.");
     }
   }
