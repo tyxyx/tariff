@@ -74,6 +74,9 @@ class TariffServiceTest {
         request.setExpiryDate(LocalDate.of(2024, 12, 31));
 
         Tariff existing = new Tariff();
+        existing.setHTSCode(request.getHtscode());
+        existing.setOriginCountry(request.getOriginCountry());
+        existing.setDestCountry(request.getDestCountry());
         existing.setExpiryDate(LocalDate.of(2024, 6, 30));
         when(tariffRepository.getTariffsByHtsCode(request.getHtscode())).thenReturn(List.of(existing));
         when(tariffRepository.save(any(Tariff.class))).thenAnswer(invocation -> invocation.getArgument(0));

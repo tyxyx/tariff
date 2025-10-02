@@ -54,7 +54,7 @@ class UserServiceTest {
 
     @Test
     void addUserShouldHashPasswordAndSave() {
-        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("new@user.com", "Secure1");
+        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("new@user.com", "SecurePass1");
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(request.password())).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -73,7 +73,7 @@ class UserServiceTest {
 
     @Test
     void addUserShouldThrowWhenEmailAlreadyExists() {
-        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("exists@user.com", "Secure1");
+        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("exists@user.com", "SecurePass1");
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(new User(request.email(), "hash")));
 
         assertThatThrownBy(() -> userService.addUser(request))
