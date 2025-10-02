@@ -1,32 +1,26 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import CalculatorPage from '../page';
 
-document.createRange = () => ({
-  setStart: () => {},
-  setEnd: () => {},
-  setStartBefore: () => {},
-  setStartAfter: () => {},
-  setEndBefore: () => {},
-  setEndAfter: () => {},
-  selectNode: () => {},
-  selectNodeContents: () => {},
-  collapse: () => {},
-  deleteContents: () => {},
-  extractContents: () => ({ cloneContents: () => ({}) }),
-  insertNode: () => {},
-  surroundContents: () => {},
-  cloneRange: () => document.createRange(),
-  detach: () => {},
-  commonAncestorContainer: {
-    nodeName: 'BODY',
-    ownerDocument: document,
-  },
-});
-
-document.execCommand = () => {};
-
 jest.mock('@/components/ui/PageHeader', () => () => <div data-testid="page-header" />);
+
+jest.mock('react-datepicker', () => ({
+  __esModule: true,
+  default: ({ onChange, selected, ...props }) => {
+    const value = selected instanceof Date && !Number.isNaN(selected.valueOf())
+      ? selected.toISOString().split('T')[0]
+      : '';
+
+    return (
+      <input
+        data-testid="date-picker"
+        type="date"
+        value={value}
+        onChange={(event) => onChange(new Date(event.target.value))}
+        {...props}
+      />
+    );
+  },
+}));
 
 const ORIGINAL_ENV = { ...process.env };
 const originalFetch = global.fetch;
@@ -76,21 +70,17 @@ describe('CalculatorPage', () => {
     global.fetch = mockFetch;
 
     render(<CalculatorPage />);
-    const user = userEvent.setup();
-
     const selects = screen.getAllByRole('combobox');
-    await user.selectOptions(selects[0], 'Laptops');
-    await user.selectOptions(selects[1], 'China');
-    await user.selectOptions(selects[2], 'United States');
+    fireEvent.change(selects[0], { target: { value: 'Laptops' } });
+    fireEvent.change(selects[1], { target: { value: 'China' } });
+    fireEvent.change(selects[2], { target: { value: 'United States' } });
 
     const numberInputs = screen.getAllByRole('spinbutton');
-    await user.clear(numberInputs[0]);
-    await user.type(numberInputs[0], '10');
-    await user.clear(numberInputs[1]);
-    await user.type(numberInputs[1], '200');
+    fireEvent.change(numberInputs[0], { target: { value: '10' } });
+    fireEvent.change(numberInputs[1], { target: { value: '200' } });
 
     const dateInput = screen.getByTestId('date-picker');
-    await user.type(dateInput, '2024-05-01');
+    fireEvent.change(dateInput, { target: { value: '2024-05-01' } });
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
