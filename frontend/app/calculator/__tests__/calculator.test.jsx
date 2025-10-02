@@ -2,26 +2,18 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CalculatorPage from '../page';
 
-jest.mock('@/components/ui/PageHeader', () => () => <div data-testid="page-header" />);
-
-jest.mock('react-datepicker', () => ({
-  __esModule: true,
-  default: ({ onChange, selected, ...props }) => {
-    const value = selected instanceof Date && !Number.isNaN(selected.valueOf())
-      ? selected.toISOString().split('T')[0]
-      : '';
-
-    return (
-      <input
-        data-testid="date-picker"
-        type="date"
-        value={value}
-        onChange={(event) => onChange(new Date(event.target.value))}
-        {...props}
-      />
-    );
+document.createRange = () => ({
+  setStart: () => {},
+  setEnd: () => {},
+  commonAncestorContainer: {
+    nodeName: 'BODY',
+    ownerDocument: document,
   },
-}));
+});
+
+document.execCommand = () => {};
+
+jest.mock('@/components/ui/PageHeader', () => () => <div data-testid="page-header" />);
 
 const ORIGINAL_ENV = { ...process.env };
 const originalFetch = global.fetch;
@@ -73,17 +65,16 @@ describe('CalculatorPage', () => {
     render(<CalculatorPage />);
     const user = userEvent.setup();
 
-    await user.selectOptions(screen.getByLabelText('Product Name'), 'Laptops');
-    await user.selectOptions(screen.getByLabelText('Import Country'), 'China');
-    await user.selectOptions(screen.getByLabelText('Export Country'), 'United States');
+    const selects = screen.getAllByRole('combobox');
+    await user.selectOptions(selects[0], 'Laptops');
+    await user.selectOptions(selects[1], 'China');
+    await user.selectOptions(selects[2], 'United States');
 
-    const quantityInput = screen.getByLabelText('Quantity');
-    await user.clear(quantityInput);
-    await user.type(quantityInput, '10');
-
-    const unitPriceInput = screen.getByLabelText('Unit Price');
-    await user.clear(unitPriceInput);
-    await user.type(unitPriceInput, '200');
+    const numberInputs = screen.getAllByRole('spinbutton');
+    await user.clear(numberInputs[0]);
+    await user.type(numberInputs[0], '10');
+    await user.clear(numberInputs[1]);
+    await user.type(numberInputs[1], '200');
 
     const dateInput = screen.getByTestId('date-picker');
     await user.type(dateInput, '2024-05-01');
