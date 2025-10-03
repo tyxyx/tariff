@@ -156,6 +156,7 @@ export default function CalculatorPage() {
               <div>
                 <label className="block mb-1 font-medium">Calculation Date</label>
                 <DatePicker
+                  data-testid="date-picker"
                   selected={calculationDate}
                   onChange={date => setCalculationDate(date)}
                   selectsStart
