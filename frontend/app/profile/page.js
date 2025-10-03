@@ -50,7 +50,7 @@ export default function DashboardPage() {
 
     try {
       const response = await fetch("http://18.139.89.63:8080/api/users/change-password", {
-        method: "POST", 
+        method: "PUT", 
         headers: {
           "Content-Type": "application/json",
         },
