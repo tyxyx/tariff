@@ -66,7 +66,8 @@ export default function CalculatorPage() {
     ) {
       // Format date as YYYY-MM-DD
       const formattedDate = calculationDate.toISOString().split("T")[0];
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tariffs/get-particular-tariff-rate`, {
+      // TODO: change this to process.env
+      fetch(`http://18.139.89.63:8080/api/tariffs/particular-tariff-rate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +82,7 @@ export default function CalculatorPage() {
         .then(res => res.json())
         .then(data => {
           // Assume API returns { tariffRate: 0.15 }
-          setTariffRate(data.tariffRate ?? 0);
+          setTariffRate(data.rate ?? 0);
         })
         .catch(() => setTariffRate(0));
     } else {
@@ -155,6 +156,7 @@ export default function CalculatorPage() {
               <div>
                 <label className="block mb-1 font-medium">Calculation Date</label>
                 <DatePicker
+                  data-testid="date-picker"
                   selected={calculationDate}
                   onChange={date => setCalculationDate(date)}
                   selectsStart
@@ -213,7 +215,7 @@ export default function CalculatorPage() {
           <CardHeader>
             <CardTitle>Tariff Summary</CardTitle>
             <CardDescription>
-              See your calculated costs and earnings.
+              See your calculated costs.
             </CardDescription>
           </CardHeader>
           <CardContent>

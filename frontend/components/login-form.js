@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+
 export function LoginForm({ children, className = "" }) {
   const router = useRouter();
 
@@ -20,13 +21,17 @@ export function LoginForm({ children, className = "" }) {
     setSuccess("");
 
     try {
-      const response = await fetch(`http://localhost:8080/api/users/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        // TODO: change this to process.env
+        `http://18.139.89.63:8080/api/users/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const data = await response.json();
 
@@ -36,6 +41,7 @@ export function LoginForm({ children, className = "" }) {
 
       if (response.ok) {
         setSuccess(data.message || "Login successful!");
+        localStorage.setItem("userEmail", email);
         router.push("/dashboard");
       }
 
@@ -79,7 +85,7 @@ export function LoginForm({ children, className = "" }) {
 }
 
 export function LoginInput({
-  children,
+  label,
   value,
   onChange,
   type = "text",
@@ -87,7 +93,7 @@ export function LoginInput({
 }) {
   return (
     <div className={` flex flex-col ${className}`}>
-      <label className="mb-2">{children}</label>
+      <label className="mb-2">{label}</label>
       <input
         className="p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
         type={type}

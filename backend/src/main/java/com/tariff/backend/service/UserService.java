@@ -42,7 +42,7 @@ public class UserService {
   private void checkPasswordMatch(String rawPassword, String storedPassword) {
     if (!passwordEncoder.matches(rawPassword, storedPassword)) {
       throw new InvalidCredentialsException(
-        "Invalid email or password. Please try again."
+        "Invalid password. Please try again."
       );
     }
   }
@@ -50,7 +50,7 @@ public class UserService {
   // To-do make password minimum length dynamic, allow admin to change this implementation
   private void checkPasswordStrength(String password) {
     if (
-      !(password.length() >= 6 &&
+      !(password.length() >= 8 &&
         password.matches(".*[A-Z].*") &&
         password.matches(".*\\d.*"))
     ) {

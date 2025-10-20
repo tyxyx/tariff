@@ -3,26 +3,20 @@ package com.tariff.backend.controller;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestBody;
 
-import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.dto.AddTariffDTO;
 import com.tariff.backend.dto.ParticularTariffDTO;
-import com.tariff.backend.exception.BadRequestException;
-import com.tariff.backend.exception.InternalServerErrorException;
-import com.tariff.backend.exception.NotFoundException;
-import com.tariff.backend.model.Product;
+import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.model.Tariff;
 import com.tariff.backend.service.TariffService;
 
@@ -52,9 +46,9 @@ public class TariffController {
     tariffService.addTariff(addTariffDTO);
     return ResponseEntity.status(201).body("Tariff Created");
   }
-
-  @PostMapping("/get-particular-tariff-rate")
-  public ResponseEntity<Tariff> getParticularTariffRate(@Valid @RequestBody ParticularTariffDTO particularTariffDTO) {
+// todo change to getmapping use req header/ params
+  @PostMapping("/particular-tariff-rate")
+  public ResponseEntity<Tariff> particularTariffRate(@Valid @RequestBody ParticularTariffDTO particularTariffDTO) {
     return ResponseEntity.ok().body(tariffService.getParticularTariff(particularTariffDTO));
   }
 
