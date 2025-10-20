@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -56,14 +57,24 @@ public class SecurityConfig {
       // identify path to auth
       .authorizeHttpRequests(request ->
         request
-          .requestMatchers("/api/users/login", "/api/users/register")
+          // Register Users
+          .requestMatchers(
+            HttpMethod.POST,
+            "/api/users/login",
+            "/api/users/register"
+          )
           .permitAll()
+          // Only admin can get all user details
+          .requestMatchers(HttpMethod.GET, "/api/users/")
+          .hasRole("ADMIN")
+          // Swagger UI
           .requestMatchers(
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html"
           )
-          .permitAll() // Swagger UI
+          .permitAll()
+          // Forbid all other requests by default
           .anyRequest()
           .authenticated()
       );

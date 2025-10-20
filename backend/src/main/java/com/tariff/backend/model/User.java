@@ -2,14 +2,19 @@ package com.tariff.backend.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
+import lombok.EqualsAndHashCode;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
+@EqualsAndHashCode
 @Table(name = "users")
 public class User implements UserDetails {
 
@@ -20,12 +25,17 @@ public class User implements UserDetails {
   @Column(nullable = false)
   private String password; // This will store the hashed password
 
+  @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  private ERole role;
+
   // Constructors, getters, and setters
   public User() {}
 
-  public User(String email, String password) {
+  public User(String email, String password, ERole role) {
     this.email = email;
     this.password = password;
+    this.role = role;
   }
 
   public void setEmail(String email) {
@@ -40,10 +50,21 @@ public class User implements UserDetails {
     this.password = password;
   }
 
-  // Retur the user's role list
+  // Update Getters and Setters
+  public ERole getRole() {
+    return role;
+  }
+
+  public User setRole(ERole role) {
+    this.role = role;
+    return this;
+  }
+
+  /* Return a collection of authorities (roles) granted to the user.
+   */
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
-    return List.of();
+    return Arrays.asList(new SimpleGrantedAuthority(role.toString()));
   }
 
   // Returns the email address

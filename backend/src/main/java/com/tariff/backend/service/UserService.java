@@ -3,6 +3,7 @@ package com.tariff.backend.service;
 import com.tariff.backend.dto.UserRequestDTO;
 import com.tariff.backend.exception.InvalidCredentialsException;
 import com.tariff.backend.exception.UserAlreadyExistsException;
+import com.tariff.backend.model.ERole;
 import com.tariff.backend.model.User;
 import com.tariff.backend.repository.UserRepository;
 import java.util.List;
@@ -71,7 +72,8 @@ public class UserService {
     checkPasswordStrength(addUserDto.password());
     User newUser = new User(
       addUserDto.email(),
-      hashPassword(addUserDto.password())
+      hashPassword(addUserDto.password()),
+      ERole.ROLE_USER
     );
     return userRepository.save(newUser);
   }

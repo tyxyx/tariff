@@ -24,9 +24,6 @@ public class UserController {
   private final JwtService jwtService;
   private final UserService userService;
 
-  // To-do JWT generation service
-  // private final JwtService jwtService;
-
   public UserController(UserService userService, JwtService jwtService) {
     this.userService = userService;
     this.jwtService = jwtService;
@@ -62,8 +59,6 @@ public class UserController {
     // Note that it takes in the record to auth user and returns seperate mutable DTO
     User authenticatedUser = userService.loginUser(loginDto);
     String jwtToken = jwtService.generateToken(authenticatedUser);
-
-    System.out.println("gahhh: " + jwtToken);
 
     return ResponseEntity.ok(
       new UserLoginDTO(jwtToken, jwtService.getExpirationTime())
