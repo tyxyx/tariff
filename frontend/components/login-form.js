@@ -1,7 +1,6 @@
 "use client"; // This is a client component
 
 import React, { Children } from "react";
-import Form from "next/form";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,16 +13,23 @@ export function LoginForm({ children, className = "" }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form reload
     setError("");
     setSuccess("");
 
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
       const response = await fetch(
-        // TODO: change this to process.env
-        `http://18.139.89.63:8080/api/users/login`,
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/users/login",
         {
           method: "POST",
           headers: {
@@ -37,20 +43,20 @@ export function LoginForm({ children, className = "" }) {
 
       if (!response.ok) {
         setError(data.message || "Login failed");
+        return;
       }
 
       if (response.ok) {
         setSuccess(data.message || "Login successful!");
         localStorage.setItem("userEmail", email);
+        // TODO: Store JWT token if provided
         router.push("/dashboard");
       }
-
-      //   const data = await response.json();
-      //   console.log("Login success:", data);
-
-      // TODO: JWT token, redirect user, etc.
     } catch (err) {
-      console.error(err.message);
+      console.error("Login error:", err);
+      setError("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,8 +82,8 @@ export function LoginForm({ children, className = "" }) {
         {error && <p className="text-red-500">{error}</p>}
         {success && <p className="text-green-500">{success}</p>}
 
-        <Button className="mt-6" type="submit">
-          Login
+        <Button className="mt-6" type="submit" disabled={isLoading}>
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
       </form>
     </div>
