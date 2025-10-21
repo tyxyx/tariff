@@ -72,8 +72,7 @@ public class UserService {
     checkPasswordStrength(addUserDto.password());
     User newUser = new User(
       addUserDto.email(),
-      hashPassword(addUserDto.password()),
-      ERole.ROLE_USER
+      hashPassword(addUserDto.password())
     );
     return userRepository.save(newUser);
   }

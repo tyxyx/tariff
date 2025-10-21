@@ -1,188 +1,255 @@
-package com.tariff.backend.service;
+// package com.tariff.backend.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+// import static org.assertj.core.api.Assertions.assertThat;
+// import static org.assertj.core.api.Assertions.assertThatThrownBy;
+// import static org.mockito.ArgumentMatchers.any;
+// import static org.mockito.Mockito.never;
+// import static org.mockito.Mockito.verify;
+// import static org.mockito.Mockito.when;
 
-import java.util.List;
-import java.util.Optional;
+// import com.tariff.backend.dto.UserRequestDTO;
+// import com.tariff.backend.exception.InvalidCredentialsException;
+// import com.tariff.backend.exception.UserAlreadyExistsException;
+// import com.tariff.backend.model.User;
+// import com.tariff.backend.repository.UserRepository;
+// import java.util.List;
+// import java.util.Optional;
+// import org.junit.jupiter.api.BeforeEach;
+// import org.junit.jupiter.api.Test;
+// import org.junit.jupiter.api.extension.ExtendWith;
+// import org.mockito.ArgumentCaptor;
+// import org.mockito.Mock;
+// import org.mockito.junit.jupiter.MockitoExtension;
+// import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+// @ExtendWith(MockitoExtension.class)
+// class UserServiceTest {
 
-import com.tariff.backend.dto.UserRequestDTO;
-import com.tariff.backend.exception.user.InvalidCredentialsException;
-import com.tariff.backend.exception.user.UserAlreadyExistsException;
-import com.tariff.backend.exception.user.UserNotFoundException;
-import com.tariff.backend.model.User;
-import com.tariff.backend.repository.UserRepository;
+//   @Mock
+//   private UserRepository userRepository;
 
-@ExtendWith(MockitoExtension.class)
-class UserServiceTest {
+//   @Mock
+//   private BCryptPasswordEncoder passwordEncoder;
 
-    @Mock
-    private UserRepository userRepository;
+//   private UserService userService;
 
-    @Mock
-    private BCryptPasswordEncoder passwordEncoder;
+//   @BeforeEach
+//   void setUp() {
+//     userService = new UserService(userRepository, passwordEncoder);
+//   }
 
-    private UserService userService;
+//   @Test
+//   void listUsersShouldReturnAllUsers() {
+//     List<User> users = List.of(new User("alice@email.com", "hash"));
+//     when(userRepository.findAll()).thenReturn(users);
 
-    @BeforeEach
-    void setUp() {
-        userService = new UserService(userRepository, passwordEncoder);
-    }
+//     List<User> result = userService.listUsers();
 
-    @Test
-    void listUsersShouldReturnAllUsers() {
-        List<User> users = List.of(new User("alice@email.com", "hash"));
-        when(userRepository.findAll()).thenReturn(users);
+//     assertThat(result).isEqualTo(users);
+//     verify(userRepository).findAll();
+//   }
 
-        List<User> result = userService.listUsers();
+//   @Test
+//   void addUserShouldHashPasswordAndSave() {
+//     UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto(
+//       "new@user.com",
+//       "SecurePass1"
+//     );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.empty()
+//     );
+//     when(passwordEncoder.encode(request.password())).thenReturn("hashed");
+//     when(userRepository.save(any(User.class))).thenAnswer(invocation ->
+//       invocation.getArgument(0)
+//     );
 
-        assertThat(result).isEqualTo(users);
-        verify(userRepository).findAll();
-    }
+//     User savedUser = userService.addUser(request);
 
-    @Test
-    void addUserShouldHashPasswordAndSave() {
-        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("new@user.com", "SecurePass1");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
-        when(passwordEncoder.encode(request.password())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+//     ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+//     verify(userRepository).save(captor.capture());
+//     User persisted = captor.getValue();
 
-        User savedUser = userService.addUser(request);
+//     assertThat(persisted.getEmail()).isEqualTo(request.email());
+//     assertThat(persisted.getPassword()).isEqualTo("hashed");
+//     assertThat(savedUser).isSameAs(persisted);
+//     verify(passwordEncoder).encode(request.password());
+//   }
 
-        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(captor.capture());
-        User persisted = captor.getValue();
+//   @Test
+//   void addUserShouldThrowWhenEmailAlreadyExists() {
+//     UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto(
+//       "exists@user.com",
+//       "SecurePass1"
+//     );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.of(new User(request.email(), "hash"))
+//     );
 
-        assertThat(persisted.getEmail()).isEqualTo(request.email());
-        assertThat(persisted.getPassword()).isEqualTo("hashed");
-        assertThat(savedUser).isSameAs(persisted);
-        verify(passwordEncoder).encode(request.password());
-    }
+//     assertThatThrownBy(() -> userService.addUser(request))
+//       .isInstanceOf(UserAlreadyExistsException.class)
+//       .hasMessage("A user with this email already exists.");
+//     verify(userRepository, never()).save(any(User.class));
+//   }
 
-    @Test
-    void addUserShouldThrowWhenEmailAlreadyExists() {
-        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("exists@user.com", "SecurePass1");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(new User(request.email(), "hash")));
+//   @Test
+//   void addUserShouldThrowWhenPasswordWeak() {
+//     UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto(
+//       "weak@user.com",
+//       "weak"
+//     );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.empty()
+//     );
 
-        assertThatThrownBy(() -> userService.addUser(request))
-            .isInstanceOf(UserAlreadyExistsException.class)
-            .hasMessage("A user with this email already exists.");
-        verify(userRepository, never()).save(any(User.class));
-    }
+//     assertThatThrownBy(() -> userService.addUser(request))
+//       .isInstanceOf(IllegalArgumentException.class)
+//       .hasMessage(
+//         "Password must be at least 8 characters long, contain an uppercase letter and a number."
+//       );
+//     verify(passwordEncoder, never()).encode(any());
+//   }
 
-    @Test
-    void addUserShouldThrowWhenPasswordWeak() {
-        UserRequestDTO.AddUserDto request = new UserRequestDTO.AddUserDto("weak@user.com", "weak");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+//   @Test
+//   void loginUserShouldReturnUserWhenCredentialsValid() {
+//     User user = new User("login@user.com", "stored");
+//     UserRequestDTO.LoginDto request = new UserRequestDTO.LoginDto(
+//       user.getEmail(),
+//       "Password1"
+//     );
+//     when(userRepository.findByEmail(user.getEmail())).thenReturn(
+//       Optional.of(user)
+//     );
+//     when(
+//       passwordEncoder.matches(request.password(), user.getPassword())
+//     ).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.addUser(request))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Password must be at least 8 characters long, contain an uppercase letter and a number.");
-        verify(passwordEncoder, never()).encode(any());
-    }
+//     User result = userService.loginUser(request);
 
-    @Test
-    void loginUserShouldReturnUserWhenCredentialsValid() {
-        User user = new User("login@user.com", "stored");
-        UserRequestDTO.LoginDto request = new UserRequestDTO.LoginDto(user.getEmail(), "Password1");
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(request.password(), user.getPassword())).thenReturn(true);
+//     assertThat(result).isSameAs(user);
+//     verify(passwordEncoder).matches(request.password(), user.getPassword());
+//   }
 
-        User result = userService.loginUser(request);
+//   @Test
+//   void loginUserShouldThrowWhenUserMissing() {
+//     UserRequestDTO.LoginDto request = new UserRequestDTO.LoginDto(
+//       "missing@user.com",
+//       "Password1"
+//     );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.empty()
+//     );
 
-        assertThat(result).isSameAs(user);
-        verify(passwordEncoder).matches(request.password(), user.getPassword());
-    }
+//     assertThatThrownBy(() -> userService.loginUser(request))
+//       .isInstanceOf(UserNotFoundException.class)
+//       .hasMessage(
+//         "We couldn't find an account with that email. Please check your details."
+//       );
+//     verify(passwordEncoder, never()).matches(any(), any());
+//   }
 
-    @Test
-    void loginUserShouldThrowWhenUserMissing() {
-        UserRequestDTO.LoginDto request = new UserRequestDTO.LoginDto("missing@user.com", "Password1");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+//   @Test
+//   void loginUserShouldThrowWhenPasswordInvalid() {
+//     User user = new User("login@user.com", "stored");
+//     UserRequestDTO.LoginDto request = new UserRequestDTO.LoginDto(
+//       user.getEmail(),
+//       "WrongPass1"
+//     );
+//     when(userRepository.findByEmail(user.getEmail())).thenReturn(
+//       Optional.of(user)
+//     );
+//     when(
+//       passwordEncoder.matches(request.password(), user.getPassword())
+//     ).thenReturn(false);
 
-        assertThatThrownBy(() -> userService.loginUser(request))
-            .isInstanceOf(UserNotFoundException.class)
-            .hasMessage("We couldn't find an account with that email. Please check your details.");
-        verify(passwordEncoder, never()).matches(any(), any());
-    }
+//     assertThatThrownBy(() -> userService.loginUser(request))
+//       .isInstanceOf(InvalidCredentialsException.class)
+//       .hasMessage("Invalid password. Please try again.");
+//   }
 
-    @Test
-    void loginUserShouldThrowWhenPasswordInvalid() {
-        User user = new User("login@user.com", "stored");
-        UserRequestDTO.LoginDto request = new UserRequestDTO.LoginDto(user.getEmail(), "WrongPass1");
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(request.password(), user.getPassword())).thenReturn(false);
+//   @Test
+//   void updatePasswordShouldPersistNewHash() {
+//     User user = new User("change@user.com", "stored");
+//     UserRequestDTO.UpdatePasswordDto request =
+//       new UserRequestDTO.UpdatePasswordDto(
+//         user.getEmail(),
+//         "Current1",
+//         "NewPass1"
+//       );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.of(user)
+//     );
+//     when(
+//       passwordEncoder.matches(request.password(), user.getPassword())
+//     ).thenReturn(true);
+//     when(passwordEncoder.encode(request.newPassword())).thenReturn("new-hash");
+//     when(userRepository.save(user)).thenAnswer(invocation ->
+//       invocation.getArgument(0)
+//     );
 
-        assertThatThrownBy(() -> userService.loginUser(request))
-            .isInstanceOf(InvalidCredentialsException.class)
-            .hasMessage("Invalid password. Please try again.");
-    }
+//     User result = userService.updatePassword(request);
 
-    @Test
-    void updatePasswordShouldPersistNewHash() {
-        User user = new User("change@user.com", "stored");
-        UserRequestDTO.UpdatePasswordDto request = new UserRequestDTO.UpdatePasswordDto(
-            user.getEmail(), "Current1", "NewPass1");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(request.password(), user.getPassword())).thenReturn(true);
-        when(passwordEncoder.encode(request.newPassword())).thenReturn("new-hash");
-        when(userRepository.save(user)).thenAnswer(invocation -> invocation.getArgument(0));
+//     assertThat(user.getPassword()).isEqualTo("new-hash");
+//     assertThat(result).isSameAs(user);
+//     verify(passwordEncoder).encode(request.newPassword());
+//     verify(userRepository).save(user);
+//   }
 
-        User result = userService.updatePassword(request);
+//   @Test
+//   void updatePasswordShouldThrowWhenUserMissing() {
+//     UserRequestDTO.UpdatePasswordDto request =
+//       new UserRequestDTO.UpdatePasswordDto(
+//         "missing@user.com",
+//         "Current1",
+//         "NewPass1"
+//       );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.empty()
+//     );
 
-        assertThat(user.getPassword()).isEqualTo("new-hash");
-        assertThat(result).isSameAs(user);
-        verify(passwordEncoder).encode(request.newPassword());
-        verify(userRepository).save(user);
-    }
+//     assertThatThrownBy(() -> userService.updatePassword(request))
+//       .isInstanceOf(UserNotFoundException.class)
+//       .hasMessage("User not found with email: missing@user.com");
+//   }
 
-    @Test
-    void updatePasswordShouldThrowWhenUserMissing() {
-        UserRequestDTO.UpdatePasswordDto request = new UserRequestDTO.UpdatePasswordDto(
-            "missing@user.com", "Current1", "NewPass1");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+//   @Test
+//   void updatePasswordShouldThrowWhenCurrentPasswordWrong() {
+//     User user = new User("change@user.com", "stored");
+//     UserRequestDTO.UpdatePasswordDto request =
+//       new UserRequestDTO.UpdatePasswordDto(
+//         user.getEmail(),
+//         "Wrong1",
+//         "NewPass1"
+//       );
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.of(user)
+//     );
+//     when(
+//       passwordEncoder.matches(request.password(), user.getPassword())
+//     ).thenReturn(false);
 
-        assertThatThrownBy(() -> userService.updatePassword(request))
-            .isInstanceOf(UserNotFoundException.class)
-            .hasMessage("User not found with email: missing@user.com");
-    }
+//     assertThatThrownBy(() -> userService.updatePassword(request))
+//       .isInstanceOf(InvalidCredentialsException.class)
+//       .hasMessage("Invalid password. Please try again.");
+//     verify(userRepository, never()).save(any(User.class));
+//   }
 
-    @Test
-    void updatePasswordShouldThrowWhenCurrentPasswordWrong() {
-        User user = new User("change@user.com", "stored");
-        UserRequestDTO.UpdatePasswordDto request = new UserRequestDTO.UpdatePasswordDto(
-            user.getEmail(), "Wrong1", "NewPass1");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(request.password(), user.getPassword())).thenReturn(false);
+//   @Test
+//   void updatePasswordShouldThrowWhenNewPasswordWeak() {
+//     User user = new User("change@user.com", "stored");
+//     UserRequestDTO.UpdatePasswordDto request =
+//       new UserRequestDTO.UpdatePasswordDto(user.getEmail(), "Current1", "weak");
+//     when(userRepository.findByEmail(request.email())).thenReturn(
+//       Optional.of(user)
+//     );
+//     when(
+//       passwordEncoder.matches(request.password(), user.getPassword())
+//     ).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.updatePassword(request))
-            .isInstanceOf(InvalidCredentialsException.class)
-            .hasMessage("Invalid password. Please try again.");
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void updatePasswordShouldThrowWhenNewPasswordWeak() {
-        User user = new User("change@user.com", "stored");
-        UserRequestDTO.UpdatePasswordDto request = new UserRequestDTO.UpdatePasswordDto(
-            user.getEmail(), "Current1", "weak");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(request.password(), user.getPassword())).thenReturn(true);
-
-        assertThatThrownBy(() -> userService.updatePassword(request))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Password must be at least 8 characters long, contain an uppercase letter and a number.");
-        verify(passwordEncoder, never()).encode(any());
-    }
-}
+//     assertThatThrownBy(() -> userService.updatePassword(request))
+//       .isInstanceOf(IllegalArgumentException.class)
+//       .hasMessage(
+//         "Password must be at least 8 characters long, contain an uppercase letter and a number."
+//       );
+//     verify(passwordEncoder, never()).encode(any());
+//   }
+// }

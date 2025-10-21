@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -105,4 +106,14 @@ public class GlobalExceptionHandler {
     );
     return new ResponseEntity<>(body, HttpStatus.FORBIDDEN); // 403
   }
+
+  @ExceptionHandler(UsernameNotFoundException.class)
+  public ResponseEntity<Map<String, String>> handleUsernameNotFound(UsernameNotFoundException ex) {
+      Map<String, String> body = Collections.singletonMap(
+              "message",
+              ex.getMessage()
+      );
+      return new ResponseEntity<>(body, HttpStatus.NOT_FOUND); // 404
+  }
+
 }

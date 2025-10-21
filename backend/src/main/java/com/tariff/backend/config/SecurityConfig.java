@@ -57,6 +57,7 @@ public class SecurityConfig {
       // identify path to auth
       .authorizeHttpRequests(request ->
         request
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
           // Register Users
           .requestMatchers(
             HttpMethod.POST,
@@ -67,6 +68,8 @@ public class SecurityConfig {
           // Only admin can get all user details
           .requestMatchers(HttpMethod.GET, "/api/users/")
           .hasRole("ADMIN")
+                // Only admin can edit user password
+                .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("ADMIN")
           // Swagger UI
           .requestMatchers(
             "/swagger-ui/**",
@@ -77,6 +80,7 @@ public class SecurityConfig {
           // Forbid all other requests by default
           .anyRequest()
           .authenticated()
+
       );
 
     return http.build();
@@ -88,7 +92,7 @@ public class SecurityConfig {
     configuration.setAllowedOrigins(List.of("http://localhost:3000/")); // Replace with your frontend URL
     configuration.setAllowedMethods(
       // List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
-      List.of("GET", "POST")
+      List.of("GET", "POST", "PUT","DELETE")
     );
     configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
     configuration.setAllowCredentials(true);
