@@ -1,4 +1,4 @@
-package com.tariff.backend.exception.user;
+package com.tariff.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

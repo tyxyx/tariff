@@ -7,9 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tariff.backend.dto.UserRequestDTO;
-import com.tariff.backend.exception.user.UserAlreadyExistsException;
-import com.tariff.backend.exception.user.UserNotFoundException;
-import com.tariff.backend.exception.user.InvalidCredentialsException;
+import com.tariff.backend.exception.InvalidCredentialsException;
+import com.tariff.backend.exception.UserAlreadyExistsException;
+import com.tariff.backend.exception.UserNotFoundException;
 import com.tariff.backend.model.User;
 import com.tariff.backend.repository.UserRepository;
 

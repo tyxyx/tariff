@@ -33,7 +33,8 @@ public class ProductDTO {
   }
 
   public boolean isEnabled() {
-    return enabled;
+    // Null-safe: default to false when not provided
+    return Boolean.TRUE.equals(enabled);
   }
 
   public void setEnabled(boolean enabled) {
