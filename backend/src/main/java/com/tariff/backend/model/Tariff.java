@@ -47,9 +47,9 @@ public class Tariff {
   // Products associated with this tariff (owning side)
   @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
   @JoinTable(
-      name = "tariff_product",
-      joinColumns = @JoinColumn(name = "tariff_id"),
-      inverseJoinColumns = @JoinColumn(name = "HTS_code")
+    name = "tariff_product",
+    joinColumns = @JoinColumn(name = "tariff_id"),
+    inverseJoinColumns = @JoinColumn(name = "HTS_code")
   )
   private Set<Product> products = new HashSet<>();
 
@@ -57,9 +57,9 @@ public class Tariff {
     // Products associated with this tariff (owning side)
   @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
   @JoinTable(
-      name = "tariff_user",
-      joinColumns = @JoinColumn(name = "tariff_id"),
-      inverseJoinColumns = @JoinColumn(name = "user_id")
+    name = "tariff_user",
+    joinColumns = @JoinColumn(name = "tariff_id"),
+    inverseJoinColumns = @JoinColumn(name = "user_id")
   )
   private Set<User> users = new HashSet<>();
 
