@@ -23,8 +23,8 @@ jobs:
 
     # Step 3: Install dependencies
     - name: Install dependencies
+      working-directory: scrapper
       run: |
-        cd scrapper
         python -m venv venv
         source venv/bin/activate
         pip install -r requirements.txt
@@ -32,6 +32,7 @@ jobs:
 
     # Step 4: Package the Lambda function
     - name: Package Lambda function
+      working-directory: scrapper
       run: |
         mkdir package
         cp main.py package/
@@ -50,6 +51,7 @@ jobs:
 
     # Step 6: Deploy to AWS Lambda
     - name: Deploy to AWS Lambda
+      working-directory: scrapper
       run: |
         aws lambda update-function-code \
           --function-name scrapper \
