@@ -39,7 +39,6 @@ jobs:
         cp -r venv/lib/python3.12/site-packages/* package/
         cd package
         zip -r ../lambda_function.zip .
-        cd ..
 
     # Step 5: Configure AWS credentials
     - name: Configure AWS credentials
