@@ -1,4 +1,4 @@
-name: Deploy to AWS Lambda
+name: Scrapper
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
         cd scrapper
         python -m venv venv
         source venv/bin/activate
-        pip install -r scrapper/requirements.txt
+        pip install -r requirements.txt
         deactivate
 
     # Step 4: Package the Lambda function
