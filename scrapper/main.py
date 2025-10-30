@@ -1,4 +1,3 @@
-
 import psycopg2
 import sys
 import boto3
@@ -19,6 +18,7 @@ RDS_PORT=os.getenv("RDS_PORT")
 RDS_USERNAME=os.getenv("RDS_USERNAME")
 RDS_REGION=os.getenv("RDS_REGION")
 RDS_DBNAME=os.getenv("RDS_DBNAME")
+RDS_PASSWORD=os.getenv("RDS_PASSWORD")
 
 # LOCAL
 LOCAL_ENDPOINT=os.getenv("LOCAL_ENDPOINT")
@@ -51,9 +51,8 @@ def connect_postgres(local: bool=True):
         session = boto3.Session(profile_name='RDSCreds', region_name=RDS_REGION) #gets the credentials from .aws/credentials
         client = session.client('rds')
         token = client.generate_db_auth_token(DBHostname=RDS_ENDPOINT, Port=RDS_PORT, DBUsername=RDS_USERNAME, Region=RDS_REGION)
-        psycopg2.connect(host=RDS_ENDPOINT, port=RDS_PORT, database=RDS_DBNAME, user=RDS_USERNAME, password=token, sslrootcert="SSLCERTIFICATE")
+        return psycopg2.connect(host=RDS_ENDPOINT, port=RDS_PORT, database=RDS_DBNAME, user=RDS_USERNAME, password=RDS_PASSWORD)
 
-# TODO: change to aws compatible connect_postgres
 def write_countries(new_data: dict[str, str]):
     conn = connect_postgres(True)
     try:
@@ -216,30 +215,30 @@ def write_tariff(record: dict, HTSCode: str) -> int:
     """
     conn = connect_postgres(True)
     cur = conn.cursor()
-    insert_sql = """INSERT INTO tariff(id, "originCountryCode", "destCountryCode", "effectiveDate", "expiryDate", "adValoremRate", "specificRate", "minQuantity", "maxQuantity", "userDefined")
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    insert_sql = """INSERT INTO tariff(id, "origin_country_ode", "dest_country_code", "effectiv_date", "expiry_date", "ad_valorem_rate", "specific_rate", "min_quantity", "max_quantity", "user_defined", "enabled")
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
 RETURNING id;"""  # Use RETURNING to fetch the ID of the inserted record
 
     search_sql = """SELECT * FROM public.tariff_product, public.tariff
-WHERE public.tariff_product."tariffId" = public.tariff.id
-AND "originCountryCode" = %s 
-AND "destCountryCode" = %s 
-AND "effectiveDate" = %s 
-AND "expiryDate" = %s 
-AND "HTSCode" = %s"""
+WHERE public.tariff_product."tariff_id" = public.tariff.id
+AND "origin_country_code" = %s 
+AND "dest_country_code" = %s 
+AND "effective_date" = %s 
+AND "expiry_date" = %s 
+AND "hts_code" = %s"""
 
     update_sql = """UPDATE tariff
 SET
-    "adValoremRate" = %s,
-    "specificRate" = %s,
-    "minQuantity" = %s,
-    "maxQuantity" = %s,
-    "userDefined" = %s
+    "ad_valorem_rate" = %s,
+    "specific_rate" = %s,
+    "min_quantity" = %s,
+    "max_quantity" = %s,
+    "user_defined" = %s
 WHERE
-    "originCountryCode" = %s
-    AND "destCountryCode" = %s
-    AND "effectiveDate" = %s
-    AND "expiryDate" = %s;
+    "origin_country_code" = %s
+    AND "dest_country_code" = %s
+    AND "effective_date" = %s
+    AND "expiry_date" = %s;
 """
 
     try:
@@ -283,9 +282,9 @@ WHERE
         # Fetch the ID of the inserted record
         inserted_id = cur.fetchone()
         if inserted_id:
-            link_sql = """INSERT INTO tariff_product("HTSCode", "tariffId")
+            link_sql = """INSERT INTO tariff_product("hts_code", "tariff_id")
             VALUES (%s, %s)
-            ON CONFLICT ("HTSCode", "tariffId") DO NOTHING"""
+            ON CONFLICT ("hts_code", "tariff_id") DO NOTHING"""
             cur.execute(link_sql, (HTSCode, inserted_id[0]))
             conn.commit()
         return inserted_id[0] if inserted_id else None
@@ -295,39 +294,130 @@ WHERE
     finally:
         conn.close()
 
-start_time = time.time()
-
-product_list = [
-    "847330",
-    "847170",
-    "851712",
-    "847130",
-    "854231"
-]
-
-print("Retrieving country information")
-country_dict = fetch_country_codes()
-print("writing to db")
-write_countries(country_dict)
-print("Countries information saved to db\n")
-
-# TODO: remove all breaks
-for origin_country_code in country_dict.keys():
-    for destination_country_code in country_dict.keys():
-        if (destination_country_code == "000"):
-            continue
-        if origin_country_code != destination_country_code:
-            print(f"Fetching data [origin: {origin_country_code}, dest: {destination_country_code}]")
-            records = fetch_tariff(origin_country_code, destination_country_code)
-            if not records:
-                print("No records found")
+def scrape_from_wits():
+    start_time = time.time()
+    print("Retrieving country information")
+    country_dict = fetch_country_codes()
+    print("writing to db")
+    write_countries(country_dict)
+    print("Countries information saved to db\n")
+    product_list = [
+        "847330",
+        "847170",
+        "851712",
+        "847130",
+        "854231"
+    ]
+    country_dict
+    for origin_country_code in country_dict.keys():
+        for destination_country_code in country_dict.keys():
+            if (destination_country_code == "000"):
                 continue
-            for product_code in records:
-                tariffs = clean_tariff(records[product_code])
-                print(f"Wrting to db")
-                for r in tariffs:
-                    write_tariff(r, product_code)
-                print(f"Saved tariff [origin: {origin_country_code}, dest: {destination_country_code}, prod: {product_code}]")
-    #         break
-    # break
-print(f"Program completed in {time.time() - start_time:.2f} seconds.")
+            if origin_country_code != destination_country_code:
+                print(f"Fetching data [origin: {origin_country_code}, dest: {destination_country_code}]")
+                records = fetch_tariff(origin_country_code, destination_country_code, product_list)
+                if not records:
+                    print("No records found")
+                    continue
+                for product_code in records:
+                    tariffs = clean_tariff(records[product_code])
+                    print(f"Wrting to db")
+                    for r in tariffs:
+                        write_tariff(r, product_code)
+                    print(f"Saved tariff [origin: {origin_country_code}, dest: {destination_country_code}, prod: {product_code}]")
+    print(f"Program completed in {time.time() - start_time:.2f} seconds.")
+
+def migrate_local_to_aws(overwrite = False):
+    try:
+        local_conn = connect_postgres(True)
+        aws_conn = connect_postgres(False)
+
+        cur = local_conn.cursor()
+        sql = "SELECT * FROM country"
+        cur.execute(sql)
+        countries = cur.fetchall()
+
+        sql = "SELECT * FROM tariff"
+        cur.execute(sql)
+        tariffs = cur.fetchall()
+
+        sql = "SELECT * FROM product"
+        cur.execute(sql)
+        products = cur.fetchall()
+
+        sql = "SELECT * FROM tariff_product"
+        cur.execute(sql)
+        tariff_product = cur.fetchall()
+
+        cur = aws_conn.cursor()
+        sql = """INSERT INTO country(code, name)
+                VALUES (%s, %s)
+                ON CONFLICT (code)"""
+        if overwrite:
+            sql += """ DO UPDATE
+                SET name = EXCLUDED.name;"""
+        else:
+            sql += " DO NOTHING"
+        for country in countries:
+            cur.execute(sql, country)
+
+        sql = """INSERT INTO product(hts_code, description, name, enabled)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (hts_code)"""
+        if overwrite:
+            sql += """ DO UPDATE
+                SET 
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    enabled = EXCLUDED.enabled;"""
+        else:
+            sql += " DO NOTHING;"
+        for product in products:
+            cur.execute(sql, product)
+
+        sql = """INSERT INTO tariff(id, origin_country_code, dest_country_code, effective_date, expiry_date, ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined, enabled)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
+                ON CONFLICT (id)"""
+        if overwrite:
+            sql += """ DO UPDATE
+                SET 
+                    origin_country_code = EXCLUDED.origin_country_code,
+                    dest_country_code = EXCLUDED.dest_country_code,
+                    effective_date = EXCLUDED.effective_date,
+                    expiry_date = EXCLUDED.expiry_date,
+                    ad_valorem_rate = EXCLUDED.ad_valorem_rate,
+                    specific_rate = EXCLUDED.specific_rate,
+                    min_quantity = EXCLUDED.min_quantity,
+                    max_quantity = EXCLUDED.max_quantity,
+                    user_defined = EXCLUDED.user_defined;"""
+        else:
+            sql += " DO NOTHING;"
+        for tariff in tariffs:
+            cur.execute(sql, tariff)
+
+        sql = """INSERT INTO tariff_product(hts_code, tariff_id)
+                VALUES (%s, %s)
+                ON CONFLICT (hts_code, tariff_id)"""
+        if overwrite:
+            sql += """ DO UPDATE
+                SET 
+                    hts_code = EXCLUDED.hts_code,
+                    tariff_id = EXCLUDED.tariff_id;"""
+        else:
+            sql += " DO NOTHING;"
+        for tp in tariff_product:
+            cur.execute(sql, tp)
+
+        aws_conn.commit()
+        print("Migration done and saved to AWS RDS instance")
+    except:
+        print(tariff)
+    finally:
+        local_conn.close()
+        aws_conn.close()
+
+def lambda_handler(event, context):
+    try:
+        scrape_from_wits()
+    except Exception as e:
+        print(e)
