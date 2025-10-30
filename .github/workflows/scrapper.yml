@@ -26,7 +26,7 @@ jobs:
       run: |
         python -m venv venv
         source venv/bin/activate
-        pip install -r requirements.txt
+        pip install -r scrapper/requirements.txt
         deactivate
 
     # Step 4: Package the Lambda function
