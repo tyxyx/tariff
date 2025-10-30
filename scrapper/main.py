@@ -53,8 +53,8 @@ def connect_postgres(local: bool=True):
         token = client.generate_db_auth_token(DBHostname=RDS_ENDPOINT, Port=RDS_PORT, DBUsername=RDS_USERNAME, Region=RDS_REGION)
         return psycopg2.connect(host=RDS_ENDPOINT, port=RDS_PORT, database=RDS_DBNAME, user=RDS_USERNAME, password=RDS_PASSWORD)
 
-def write_countries(new_data: dict[str, str]):
-    conn = connect_postgres(True)
+def write_countries(new_data: dict[str, str], local=False):
+    conn = connect_postgres(local)
     try:
         cur = conn.cursor()
         sql = """INSERT INTO country(code, name)
@@ -202,7 +202,7 @@ def clean_tariff(records):
     return result
 
 
-def write_tariff(record: dict, HTSCode: str) -> int:
+def write_tariff(record: dict, HTSCode: str, local=False) -> int:
     """
     Inserts a single tariff record into the database and returns the ID of the inserted record.
 
@@ -213,7 +213,7 @@ def write_tariff(record: dict, HTSCode: str) -> int:
     Returns:
         int: The ID of the inserted record, or None if the insertion failed.
     """
-    conn = connect_postgres(True)
+    conn = connect_postgres(local)
     cur = conn.cursor()
     insert_sql = """INSERT INTO tariff(id, "origin_country_ode", "dest_country_code", "effectiv_date", "expiry_date", "ad_valorem_rate", "specific_rate", "min_quantity", "max_quantity", "user_defined", "enabled")
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
