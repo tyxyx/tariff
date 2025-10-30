@@ -1,0 +1,52 @@
+name: Deploy to AWS Lambda
+
+on:
+  push:
+    branches:
+      # - main
+      - backend-scrapper
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Step 2: Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12' # Match your Lambda runtime version
+
+    # Step 3: Install dependencies
+    - name: Install dependencies
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        deactivate
+
+    # Step 4: Package the Lambda function
+    - name: Package Lambda function
+      run: |
+        mkdir package
+        cp main.py package/
+        cp -r venv/lib/python3.9/site-packages/* package/
+        cd package
+        zip -r ../lambda_function.zip .
+        cd ..
+
+    # Step 5: Deploy to AWS Lambda
+    - name: Deploy to AWS Lambda
+      uses: aws-actions/aws-cli-action@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-southeast-1 # Replace with your AWS region
+        command: |
+          aws lambda update-function-code \
+            --function-name scrapper \
+            --zip-file fileb://lambda_function.zip
