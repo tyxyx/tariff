@@ -27,6 +27,7 @@ LOCAL_USERNAME=os.getenv("LOCAL_USERNAME")
 LOCAL_DBNAME=os.getenv("LOCAL_DBNAME")
 LOCAL_PASSWORD=os.getenv("LOCAL_PASSWORD")
 
+WTO_API_KEY=os.getenv("WTO_API_KEY")
 
 # try:
 #     # AWS
@@ -421,3 +422,35 @@ def lambda_handler(event, context):
         scrape_from_wits()
     except Exception as e:
         print(e)
+
+def fetch_tariff(origin, destination, products=["847130", "847170", "847330", "851712", "854231"]):
+    url = "https://wits.worldbank.org/API/V1/SDMX/V21/rest/data/DF_WITS_Tariff_TRAINS/A.{destination}.{origin}.{product}.reported/?startperiod=1988&detail=dataOnly".format(origin=origin, destination=destination, product="+".join(products))
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
+        records = parse_tariff_from_content(response.content, origin, destination)
+        return records
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        return None
+    
+def scrape_from_wto():
+    url = "http://api.wto.org/timeseries/v1/indicators"
+    headers = {
+        "Ocp-Apim-Subscription-Key": WTO_API_KEY
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
+        records = response.json()
+        for record in records:
+            print(record["name"])
+        return records
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        return None
+    
+if __name__ == "__main__":
+    scrape_from_wto()
