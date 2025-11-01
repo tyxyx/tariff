@@ -41,6 +41,7 @@ export default function CalculatorPage() {
   const [unitPrice, setUnitPrice] = useState(1000);
   const [calculationDate, setCalculationDate] = useState("");
   const [dateError, setDateError] = useState("");
+  const [activeTab, setActiveTab] = useState("calculator");
 
   // function getTariffRate(product, originCountry, destCountry) {
   //   // Replace ltrrrrrrrrrrrr
@@ -100,7 +101,7 @@ export default function CalculatorPage() {
     >
       <PageHeader />
       <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
-        {/* Calculator Card */}
+        {/* Calculator Card with Tabs */}
         <Card className="max-w-lg w-full mx-auto">
           <CardHeader>
             <Calculator className="h-10 w-10 text-primary mb-2" />
@@ -110,104 +111,138 @@ export default function CalculatorPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
-              <div>
-                <label className="block mb-1 font-medium">Product Name</label>
-                <select
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={product}
-                  onChange={e => setProduct(e.target.value)}
-                >
-                  <option value="" disabled hidden>Select product</option>
-                  {products.map(product => (
-                    <option key={product} value={product}>{product}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Import Country</label>
-                <select
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={originCountry}
-                  onChange={e => setImportCountry(e.target.value)}
-                >
-                  <option value="" disabled hidden>Select country</option>
-                  {countries.map(country => (
-                    <option key={country} value={country}>{country}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Export Country</label>
-                <select
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={destCountry}
-                  onChange={e => setExportCountry(e.target.value)}
-                >
-                  <option value="" disabled hidden>Select country</option>
-                  {countries.map(country => (
-                    <option key={country} value={country}>{country}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Calculation Date</label>
-                <DatePicker
-                  data-testid="date-picker"
-                  selected={calculationDate}
-                  onChange={date => setCalculationDate(date)}
-                  selectsStart
-                  calculationDate={calculationDate}
-                  placeholderText="Select calculation date"
-                  className="w-full border rounded px-3 py-2"
-                  popperPlacement="bottom"
-                  style={{ backgroundColor: "black", color: "white" }}
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Quantity</label>
+            {/* Tabs */}
+            <div className="mb-4 flex border-b border-gray-700">
+              <button
+                className={`px-4 py-2 focus:outline-none ${activeTab === "calculator" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-400"}`}
+                onClick={() => setActiveTab("calculator")}
+              >
+                Calculator
+              </button>
+              <button
+                className={`px-4 py-2 focus:outline-none ${activeTab === "predict" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-400"}`}
+                onClick={() => setActiveTab("predict")}
+              >
+                Predict
+              </button>
+            </div>
+            {/* Tab Content */}
+            {activeTab === "calculator" && (
+              <form className="space-y-4">
+                {/* ...existing calculator form code... */}
+                <div>
+                  <label className="block mb-1 font-medium">Product Name</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={product}
+                    onChange={e => setProduct(e.target.value)}
+                  >
+                    <option value="" disabled hidden>Select product</option>
+                    {products.map(product => (
+                      <option key={product} value={product}>{product}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Import Country</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={originCountry}
+                    onChange={e => setImportCountry(e.target.value)}
+                  >
+                    <option value="" disabled hidden>Select country</option>
+                    {countries.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Export Country</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={destCountry}
+                    onChange={e => setExportCountry(e.target.value)}
+                  >
+                    <option value="" disabled hidden>Select country</option>
+                    {countries.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Calculation Date</label>
+                  <DatePicker
+                    selected={calculationDate}
+                    onChange={date => setCalculationDate(date)}
+                    selectsStart
+                    calculationDate={calculationDate}
+                    placeholderText="Select calculation date"
+                    className="w-full border rounded px-3 py-2"
+                    popperPlacement="bottom"
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Quantity</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={quantity}
+                    onChange={e => {
+                      const val = e.target.value.replace(/^0+/, "");
+                      setQuantity(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Unit Price</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={unitPrice}
+                    onChange={e => {
+                      const val = e.target.value.replace(/^0+/, "");
+                      setUnitPrice(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter unit price"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Tariff Rate</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-3 py-2"
+                    value={tariffRate ? `${(tariffRate * 100).toFixed(2)}%` : ""}
+                    readOnly
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+              </form>
+            )}
+            {activeTab === "predict" && (
+              <div className="space-y-4">
+                <label className="block mb-1 font-medium">Upload News Article (PDF)</label>
                 <input
-                  type="number"
-                  min={1}
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={quantity}
-                  onChange={e => {
-                    const val = e.target.value.replace(/^0+/, "");
-                    setQuantity(val === "" ? "" : Number(val));
-                  }}
-                  placeholder="Enter quantity"
+                  type="file"
+                  accept="application/pdf"
+                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
                 />
+                <Button className="w-full" type="button" disabled>
+                  Predict Tariff Changes
+                </Button>
+                <div className="mt-2 text-xs text-gray-400">
+                  (Feature coming soon)
+                </div>
               </div>
-              <div>
-                <label className="block mb-1 font-medium">Unit Price</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={unitPrice}
-                  onChange={e => {
-                    const val = e.target.value.replace(/^0+/, "");
-                    setUnitPrice(val === "" ? "" : Number(val));
-                  }}
-                  placeholder="Enter unit price"
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Tariff Rate</label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2"
-                  value={tariffRate ? `${(tariffRate * 100).toFixed(2)}%` : ""}
-                  readOnly
-                  style={{ backgroundColor: "black", color: "white" }}
-                />
-              </div>
-            </form>
+            )}
           </CardContent>
         </Card>
         {/* Tariff Summary Card */}
