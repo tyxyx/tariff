@@ -85,7 +85,7 @@ describe('CalculatorPage', () => {
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe('http://18.139.89.63:8080/api/tariffs/particular-tariff-rate');
+    expect(url).toBe(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/particular-tariff-rate`);
     expect(options).toMatchObject({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
