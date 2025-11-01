@@ -30,6 +30,7 @@
 		<java.version>21</java.version>
 		<spring-modulith.version>2.0.0-M2</spring-modulith.version>
 	</properties>
+		<!-- Removed misplaced dependencies block -->
 	<repositories>
 		<repository>
 			<id>google</id>
@@ -38,6 +39,11 @@
 		</repository>
 	</repositories>
 	<dependencies>
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>2.0.30</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jdbc</artifactId>
