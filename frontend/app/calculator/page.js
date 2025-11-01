@@ -42,6 +42,35 @@ export default function CalculatorPage() {
   const [calculationDate, setCalculationDate] = useState("");
   const [dateError, setDateError] = useState("");
   const [activeTab, setActiveTab] = useState("calculator");
+  // Predict tab state
+  const [pdfFile, setPdfFile] = useState(null);
+  const [predicting, setPredicting] = useState(false);
+  const [predictionResult, setPredictionResult] = useState("");
+  const [predictionError, setPredictionError] = useState("");
+
+  // Handler for Predict button
+  async function handlePredict() {
+    if (!pdfFile) return;
+    setPredicting(true);
+    setPredictionResult("");
+    setPredictionError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      // TODO: change this to process.env
+      const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/predict/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Prediction failed");
+      const text = await res.text();
+      setPredictionResult(text);
+    } catch (err) {
+      setPredictionError("Prediction failed. Please try again.");
+    } finally {
+      setPredicting(false);
+    }
+  }
 
   // function getTariffRate(product, originCountry, destCountry) {
   //   // Replace ltrrrrrrrrrrrr
@@ -234,13 +263,19 @@ export default function CalculatorPage() {
                   type="file"
                   accept="application/pdf"
                   className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
+                  onChange={e => {
+                    if (e.target.files && e.target.files[0]) setPdfFile(e.target.files[0]);
+                  }}
                 />
-                <Button className="w-full" type="button" disabled>
-                  Predict Tariff Changes
+                <Button className="w-full" type="button" onClick={handlePredict} disabled={!pdfFile || predicting}>
+                  {predicting ? "Predicting..." : "Predict Tariff Changes"}
                 </Button>
-                <div className="mt-2 text-xs text-gray-400">
-                  (Feature coming soon)
-                </div>
+                {predictionResult && (
+                  <div className="mt-2 text-sm text-green-400 whitespace-pre-line">{predictionResult}</div>
+                )}
+                {predictionError && (
+                  <div className="mt-2 text-sm text-red-400">{predictionError}</div>
+                )}
               </div>
             )}
           </CardContent>
