@@ -57,8 +57,7 @@ export default function CalculatorPage() {
     try {
       const formData = new FormData();
       formData.append("file", pdfFile);
-      // TODO: change this to process.env
-      const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/predict/upload`, {
+      const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/predict`, {
         method: "POST",
         body: formData,
       });

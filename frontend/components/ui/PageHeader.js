@@ -9,10 +9,10 @@ import { useEffect } from "react";
 export default function PageHeader() {
   const router = useRouter();
   useEffect(() => {
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      router.push("/login");
-    }
+    // const email = localStorage.getItem("userEmail");
+    // if (!email) {
+    //   router.push("/login");
+    // }
   }, [router]);
   const handleLogout = () => {
     localStorage.removeItem("userEmail");

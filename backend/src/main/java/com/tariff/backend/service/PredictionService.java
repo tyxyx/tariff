@@ -1,5 +1,5 @@
 package com.tariff.backend.service;
-
+import org.springframework.beans.factory.annotation.Value;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import org.springframework.stereotype.Service;
@@ -13,23 +13,30 @@ import org.apache.pdfbox.text.PDFTextStripper;
 
 @Service
 public class PredictionService {
-    public String sendPdfToGemini(MultipartFile file) {
-        String extractedText = "Only give responses that are related to tariff prediction. Use only the below context to predict how tariff prices may shift. If the below context is unrelated to tariffs, provide a basic response informing the client that the PDF uploaded is irrelevant";
-        extractedText += extractTextFromPdf(file);
-        
-        Client client = Client.builder().apiKey("myapikey").build();
+    @Value("${GEMINI_API_KEY}")
+    private String apiKey;
 
-        GenerateContentResponse response =
-            client.models.generateContent(
+        
+        
+    
+    public String sendPdfToGemini(MultipartFile file) {
+        
+        String extractedText = "You are an assistant providing brief tariff predictions based only on the following extracted PDF text. Summarize key tariff changes or trends in 1-2 sentences for an app user. If the text is irrelevant to tariffs, reply politely: 'This document is irrelevant to tariff predictions, please upload another.' Keep the tone clear, simple, and user-friendly. Context:";
+        extractedText += extractTextFromPdf(file);
+
+
+        Client client = Client.builder().apiKey(apiKey).build();
+        GenerateContentResponse response = client.models.generateContent(
                 "gemini-2.5-flash",
                 extractedText,
                 null);
-        return response != null ? response.toString() : "No response from Gemini API";
+        return response.text();
+
     }
 
     private String extractTextFromPdf(MultipartFile file) {
         try (InputStream inputStream = file.getInputStream();
-             PDDocument document = PDDocument.load(inputStream)) {
+                PDDocument document = PDDocument.load(inputStream)) {
             PDFTextStripper pdfStripper = new PDFTextStripper();
             return pdfStripper.getText(document);
         } catch (IOException e) {
