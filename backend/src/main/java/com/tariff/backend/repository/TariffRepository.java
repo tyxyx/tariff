@@ -15,27 +15,27 @@ import com.tariff.backend.model.Tariff;
 public interface TariffRepository extends JpaRepository<Tariff, UUID>{
   @Query("""
       SELECT t FROM Tariff t JOIN t.products p
-      WHERE t.originCountry = :originCountry
-      AND t.destCountry = :destCountry
+      WHERE t.originCountry.code = :originCountry
+      AND t.destCountry.code = :destCountry
       AND t.effectiveDate <= :targetDate
       AND (
         t.expiryDate IS NULL
         OR t.expiryDate >= :targetDate
       )
-      AND t.enabled
+    AND p.enabled = true
       AND p.name = :productName
       """)
   Optional<Tariff> getTariffFromProductCountriesAndDates(String productName, LocalDate targetDate, String originCountry, String destCountry);
 
   @Query("""
-      SELECT t FROM Tariff t
-      WHERE t.HTSCode = :htsCode
-      AND t.enabled
+    SELECT DISTINCT t FROM Tariff t JOIN t.products p
+    WHERE p.HTS_code = :htsCode
+    AND p.enabled = true
       """)
   List<Tariff> getTariffsByHtsCode(String htsCode);
 
   @Query("""
-      SELECT t FROM Tariff t JOIN t.products p
+    SELECT DISTINCT t FROM Tariff t LEFT JOIN FETCH t.products p
       """)
   List<Tariff> listAll();
 }

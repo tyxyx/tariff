@@ -27,6 +27,12 @@
 
 //   @Mock
 //   private UserRepository userRepository;
+// import com.tariff.backend.dto.UserRequestDTO;
+// import com.tariff.backend.exception.InvalidCredentialsException;
+// import com.tariff.backend.exception.UserAlreadyExistsException;
+// import com.tariff.backend.exception.UserNotFoundException;
+// import com.tariff.backend.model.User;
+// import com.tariff.backend.repository.UserRepository;
 
 //   @Mock
 //   private BCryptPasswordEncoder passwordEncoder;
