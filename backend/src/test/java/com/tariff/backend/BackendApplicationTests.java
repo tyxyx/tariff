@@ -1,4 +1,4 @@
-package com.tariff.backend;
+package test.java.com.tariff.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
