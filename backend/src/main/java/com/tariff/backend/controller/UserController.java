@@ -7,15 +7,12 @@ import com.tariff.backend.service.JwtService;
 import com.tariff.backend.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
+
+import org.hibernate.sql.Update;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(path = "api/users")
@@ -71,4 +68,19 @@ public class UserController {
   ) {
     return userService.updatePassword(updatePasswordDto);
   }
+
+    @DeleteMapping("/")
+    public User deleteUser(@Valid @RequestBody UserRequestDTO.DeleteUserDto deleteUserDto) {
+        return userService.deleteUser(deleteUserDto);
+    }
+
+    @PutMapping("/upgrade-role")
+    public User upgradeRole(@Valid @RequestBody UserRequestDTO.UpdateUserRoleDto updateUserRoleDto) {
+      return userService.upgradeRole(updateUserRoleDto);
+    }
+
+    @PutMapping("/downgrade-role")
+    public User downgradeRole(@Valid @RequestBody UserRequestDTO.UpdateUserRoleDto updateUserRoleDto) {
+        return userService.downgradeRole(updateUserRoleDto);
+    }
 }

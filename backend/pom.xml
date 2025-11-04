@@ -119,10 +119,13 @@
 		    <groupId>org.springframework.security</groupId>
 		    <artifactId>spring-security-core</artifactId>
 		    <version>6.5.5</version> <!-- Use the latest compatible version -->
-			<groupId>com.google.genai</groupId>
-			<artifactId>google-genai</artifactId>
-			<version>1.0.0</version> <!-- or the latest available version -->
 		</dependency>
+
+        <dependency>
+            <groupId>com.google.genai</groupId>
+            <artifactId>google-genai</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

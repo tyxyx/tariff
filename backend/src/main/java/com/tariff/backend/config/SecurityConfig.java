@@ -17,6 +17,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -57,30 +60,29 @@ public class SecurityConfig {
       // identify path to auth
       .authorizeHttpRequests(request ->
         request
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+          .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
           // Register Users
           .requestMatchers(
             HttpMethod.POST,
             "/api/users/login",
             "/api/users/register"
-          )
-          .permitAll()
+          ).permitAll()
+
           // Only admin can get all user details
-          .requestMatchers(HttpMethod.GET, "/api/users/")
-          .hasRole("ADMIN")
-                // Only admin can edit user password
-                .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("ADMIN")
+          .requestMatchers(HttpMethod.GET, "/api/users/").hasRole("ADMIN")
+
+          // Only admin can edit user password
+          .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
           // Swagger UI
           .requestMatchers(
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html"
-          )
-          .permitAll()
-          // Forbid all other requests by default
-          .anyRequest()
-          .authenticated()
+          ).permitAll()
 
+          // Forbid all other requests by default
+          .anyRequest().authenticated()
       );
 
     return http.build();
