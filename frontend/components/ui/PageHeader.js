@@ -10,9 +10,9 @@ export default function PageHeader() {
   const router = useRouter();
   useEffect(() => {
     const email = localStorage.getItem("userEmail");
-    if (!email) {
-      router.push("/login");
-    }
+    // if (!email) {
+    //   router.push("/login");
+    // }
   }, [router]);
   const handleLogout = () => {
     localStorage.removeItem("userEmail");
@@ -31,7 +31,7 @@ export default function PageHeader() {
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
               {/* Welcome, {user.name} */}
-              Welcome, User
+              Welcome
             </span>
             <Link href="/profile">
               <Button
