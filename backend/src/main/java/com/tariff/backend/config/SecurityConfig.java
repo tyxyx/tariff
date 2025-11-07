@@ -73,7 +73,8 @@ public class SecurityConfig {
 
           // Only admin can edit user password
           .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
+          .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
+          
           // Swagger UI
           .requestMatchers(
             "/swagger-ui/**",
@@ -91,7 +92,7 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(List.of("http://localhost:3000/")); // Replace with your frontend URL
+    configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Replace with your frontend URL
     configuration.setAllowedMethods(
       // List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
       List.of("GET", "POST", "PUT","DELETE")
