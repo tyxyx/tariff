@@ -1,17 +1,15 @@
 package com.tariff.backend.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
 import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.exception.NotFoundException;
 import com.tariff.backend.model.Product;
-import com.tariff.backend.model.Tariff;
 import com.tariff.backend.repository.ProductRepository;
-
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class ProductService {
@@ -38,7 +36,7 @@ public class ProductService {
   }
 
   // Get a product by ID
-  public Product getProductById(UUID productId) {
+  public Product getProductById(String productId) {
     return productRepository.findById(productId)
         .orElseThrow(() -> new NotFoundException("Product not found"));
   }
@@ -49,7 +47,7 @@ public class ProductService {
   }
 
   // Update a product
-  public Product updateProduct(UUID productId, ProductDTO productDTO) {
+  public Product updateProduct(String productId, ProductDTO productDTO) {
     return productRepository.findById(productId).map(product -> {
       product.setName(productDTO.getName());
       product.setDescription(productDTO.getDescription());
@@ -58,7 +56,7 @@ public class ProductService {
   }
 
   // Delete a product
-  public void deleteProduct(UUID productId, boolean softDelete) {
+  public void deleteProduct(String productId, boolean softDelete) {
     Product product = productRepository.findById(productId)
         .orElseThrow(() -> new NotFoundException("Product not found"));
 

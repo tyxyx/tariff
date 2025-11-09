@@ -1,21 +1,19 @@
 package com.tariff.backend.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.tariff.backend.dto.ProductDTO;
@@ -68,7 +66,7 @@ class ProductServiceTest {
 
     @Test
     void getProductByIdShouldReturnProduct() {
-        UUID id = UUID.randomUUID();
+        String id = "1234.56";
         Product product = buildProduct();
         when(productRepository.findById(id)).thenReturn(Optional.of(product));
 
@@ -79,7 +77,7 @@ class ProductServiceTest {
 
     @Test
     void getProductByIdShouldThrowWhenMissing() {
-        UUID id = UUID.randomUUID();
+        String id = "1234.56";
         when(productRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> productService.getProductById(id))
@@ -99,9 +97,8 @@ class ProductServiceTest {
 
     @Test
     void updateProductShouldPersistChanges() {
-        UUID id = UUID.randomUUID();
+        String id = "1234.56";
         Product existing = buildProduct();
-        existing.setId(id);
         ProductDTO dto = new ProductDTO();
         dto.setName("Updated Name");
         dto.setDescription("Updated Description");
@@ -118,7 +115,7 @@ class ProductServiceTest {
 
     @Test
     void updateProductShouldThrowWhenMissing() {
-        UUID id = UUID.randomUUID();
+        String id = "1234.56";
         ProductDTO dto = buildProductDTO();
         when(productRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -129,7 +126,7 @@ class ProductServiceTest {
 
     @Test
     void deleteProductShouldSoftDeleteWhenRequested() {
-        UUID id = UUID.randomUUID();
+        String id = "1234.56";
         Product product = buildProduct();
         when(productRepository.findById(id)).thenReturn(Optional.of(product));
         when(productRepository.save(product)).thenAnswer(invocation -> invocation.getArgument(0));
@@ -143,7 +140,7 @@ class ProductServiceTest {
 
     @Test
     void deleteProductShouldHardDeleteWhenSoftDeleteFalse() {
-        UUID id = UUID.randomUUID();
+        String id = "1234.56";
         Product product = buildProduct();
         when(productRepository.findById(id)).thenReturn(Optional.of(product));
 

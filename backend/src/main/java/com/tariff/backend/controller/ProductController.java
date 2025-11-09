@@ -1,17 +1,25 @@
 package com.tariff.backend.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.model.Product;
 import com.tariff.backend.service.ProductService;
 
 import jakarta.validation.Valid;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
+ 
 
 @RestController
 @RequestMapping("/api/products")
@@ -32,7 +40,7 @@ public class ProductController {
 
   // Get a product by ID
   @GetMapping("/{productId}")
-  public ResponseEntity<Product> getProductById(@PathVariable UUID productId) {
+  public ResponseEntity<Product> getProductById(@PathVariable String productId) {
     Product product = productService.getProductById(productId);
     return ResponseEntity.ok(product);
   }
@@ -46,14 +54,14 @@ public class ProductController {
 
   // Update a product
   @PutMapping("/{productId}")
-  public ResponseEntity<Product> updateProduct(@PathVariable UUID productId, @RequestBody ProductDTO productDTO) {
+  public ResponseEntity<Product> updateProduct(@PathVariable String productId, @RequestBody ProductDTO productDTO) {
     Product product = productService.updateProduct(productId, productDTO);
     return ResponseEntity.ok(product);
   }
 
   // Delete a product
   @DeleteMapping("/{productId}")
-  public ResponseEntity<String> deleteProduct(@PathVariable UUID productId, @RequestParam(required = false) Boolean softDelete) {
+  public ResponseEntity<String> deleteProduct(@PathVariable String productId, @RequestParam(required = false) Boolean softDelete) {
     if (softDelete == null) {
       softDelete = true;
     }
