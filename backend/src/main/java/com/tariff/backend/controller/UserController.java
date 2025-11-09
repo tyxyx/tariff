@@ -7,8 +7,6 @@ import com.tariff.backend.service.JwtService;
 import com.tariff.backend.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
-
-import org.hibernate.sql.Update;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,17 +26,14 @@ public class UserController {
 
   @GetMapping("/")
   public List<User> getAllUsers() {
-    return this.userService.listUsers();
+    return userService.listUsers();
   }
 
   //   Return users with token for testing
   @GetMapping("/me")
   public ResponseEntity<User> authenticatedUser() {
-    Authentication authentication = SecurityContextHolder.getContext()
-      .getAuthentication();
-
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     User currentUser = (User) authentication.getPrincipal();
-
     return ResponseEntity.ok(currentUser);
   }
 
@@ -68,6 +63,11 @@ public class UserController {
   ) {
     return userService.updatePassword(updatePasswordDto);
   }
+
+  // @PutMapping("/change-email")
+  // public User updatePassword(@Valid @RequestBody UserRequestDTO.UpdateEmailDto updateEmailDto) {
+  //   return userService.updateEmail(updateEmailDto);
+  // }
 
     @DeleteMapping("/")
     public User deleteUser(@Valid @RequestBody UserRequestDTO.DeleteUserDto deleteUserDto) {

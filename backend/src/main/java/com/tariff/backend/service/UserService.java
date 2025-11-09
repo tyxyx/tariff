@@ -124,6 +124,17 @@ public class UserService {
     return userRepository.save(user);
   }
 
+  // public User updateEmail(UserRequestDTO.UpdateEmailDto updateEmailDto) {
+  //   User user = findUserByEmailOrThrow(updateEmailDto.email());
+
+  //   if (updateEmailDto.email().equals(updateEmailDto.newEmail())) {
+  //     throw new InvalidCredentialsException("New email must be different from the current email");
+  //   };
+
+  //   user.setEmail(updateEmailDto.newEmail());
+  //   return userRepository.save(user);
+  // }
+
   public User deleteUser(UserRequestDTO.DeleteUserDto deleteUserDto) {
       User user = findUserByEmailOrThrow(deleteUserDto.email());
       userRepository.delete(user);

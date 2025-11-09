@@ -17,9 +17,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
-import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
-import org.springframework.security.config.core.GrantedAuthorityDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -58,33 +55,33 @@ public class SecurityConfig {
         UsernamePasswordAuthenticationFilter.class
       )
       // identify path to auth
-      .authorizeHttpRequests(request ->
-        request
+  .authorizeHttpRequests(request ->
+      request
+          // 1. Public Endpoints (Be specific!)
           .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-          // Register Users
-          .requestMatchers(
-            HttpMethod.POST,
-            "/api/users/login",
-            "/api/users/register"
-          ).permitAll()
+          .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll() // Assuming this is for registration
+          .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll() // Assuming you have a login endpoint
+          .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
-          // Only admin can get all user details
-          .requestMatchers(HttpMethod.GET, "/api/users/").hasRole("ADMIN")
+          // 2. User "Self-Service" Rules (Authenticated)
+          // Placed *before* Admin rules to be matched first
+          .requestMatchers(HttpMethod.PUT, "/api/users/me/password").authenticated() // For changing *own* password
+          .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated() // For getting *own* profile
 
-          // Only admin can edit user password
-          .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("ADMIN")
-          .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
-          
-          // Swagger UI
-          .requestMatchers(
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/swagger-ui.html"
-          ).permitAll()
+          // 3. SUPER_ADMIN Rules (Most specific roles first)
+          .requestMatchers(HttpMethod.PUT, "/api/users/downgrade-role").hasRole("SUPER_ADMIN")
 
-          // Forbid all other requests by default
+          // 4. ADMIN and SUPER_ADMIN Rules
+          .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can view all"
+          .requestMatchers(HttpMethod.PUT, "/api/users/upgrade-role").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can upgrade user"
+
+          // No specific delete for super-admin; it's covered by the ADMIN/SUPER_ADMIN rule below.
+          // The service layer will check if they are deleting an admin.
+          .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+          // 5. Deny all other requests by default (unless authenticated)
           .anyRequest().authenticated()
-      );
+  );
 
     return http.build();
   }

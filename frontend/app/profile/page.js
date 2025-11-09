@@ -1,14 +1,11 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { colors } from "@/styles/colors";
 import React, { useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
+import Cookies from "js-cookie";
 
 export default function DashboardPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -20,9 +17,7 @@ export default function DashboardPage() {
   // Password validation function
   const isPasswordValid = (password) => {
     return (
-      password.length >= 8 &&
-      /[A-Z]/.test(password) &&
-      /\d/.test(password)
+      password.length >= 8 && /[A-Z]/.test(password) && /\d/.test(password)
     );
   };
 
@@ -42,24 +37,52 @@ export default function DashboardPage() {
       return;
     }
 
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      setError("User not logged in.");
+    // Get the token from the cookie
+    const token = Cookies.get("authToken");
+    if (!token) {
+      setError("Authentication token not found.");
       return;
     }
 
+    // extracct email from jwt headers instead of localStorage
     try {
-      const response = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/change-password`, {
-        method: "PUT", 
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password: currentPassword,
-          newPassword,
-        }),
-      });
+      const decoded = jwtDecode(token);
+      const email = decoded.email || decoded.sub;
+      if (!email) {
+        setError("Email not found in the token payload.");
+        return;
+      }
+    } catch (error) {
+      //todo fix ur user backend see why 403 error not appearing,
+      // replace with backend error
+      console.error("JWT Decode Error:", error);
+      setError("Invalid authentication token.");
+      return;
+    }
+
+    // // Changed to extract from jwt headers
+    // const email = localStorage.getItem("userEmail");
+    // if (!email) {
+    //   setError("User not logged in.");
+    //   return;
+    // }
+
+    try {
+      const response = await fetch(
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/change-password`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // pass jwt shit
+          },
+          body: JSON.stringify({
+            email,
+            password: currentPassword,
+            newPassword: newPassword,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -130,7 +153,9 @@ export default function DashboardPage() {
                     <p style={{ color: "red", marginBottom: 12 }}>{error}</p>
                   )}
                   {success && (
-                    <p style={{ color: "green", marginBottom: 12 }}>{success}</p>
+                    <p style={{ color: "green", marginBottom: 12 }}>
+                      {success}
+                    </p>
                   )}
                 </div>
                 <Button

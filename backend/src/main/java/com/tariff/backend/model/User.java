@@ -23,7 +23,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Table(name = "users")
 public class User implements UserDetails{
 
-  public enum Role { ADMIN, USER }
+  public enum Role { SUPER_ADMIN, ADMIN, USER }
 
   @Id
   @Column(nullable = false, unique = true)
@@ -71,12 +71,12 @@ public class User implements UserDetails{
             this.role = Role.USER;
         }
     }
-
+    
     // Please DO NOT REMOVE, this handles the authentication for JWT,
     // if removed can run, but JWT would not be used.
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // DO NOT REMOVE: Prefixes with "ROLE_" for Spring Security!!!
+        // DO NOT REMOVE: Prefixes with "ROLE_" for Spring Security
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
