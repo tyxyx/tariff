@@ -4,3 +4,4 @@ node_modules
 **/.terraform/*
 backEndKeyPair.pem
 frontEndKeyPair.pem
+.env
