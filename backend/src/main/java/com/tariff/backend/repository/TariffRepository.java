@@ -22,8 +22,8 @@ public interface TariffRepository extends JpaRepository<Tariff, UUID>{
         t.expiryDate IS NULL
         OR t.expiryDate >= :targetDate
       )
-    AND p.enabled = true
-      AND p.name = :productName
+      AND p.enabled = true
+      AND p.HTS_code = :productName
       """)
   Optional<Tariff> getTariffFromProductCountriesAndDates(String productName, LocalDate targetDate, String originCountry, String destCountry);
 

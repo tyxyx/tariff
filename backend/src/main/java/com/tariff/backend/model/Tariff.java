@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -51,6 +53,7 @@ public class Tariff {
     joinColumns = @JoinColumn(name = "tariff_id"),
     inverseJoinColumns = @JoinColumn(name = "HTS_code")
   )
+  @JsonIgnore
   private Set<Product> products = new HashSet<>();
 
 
