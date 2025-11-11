@@ -5,36 +5,55 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { colors } from "@/styles/colors";
 
-const countries = [
-  "United States",
-  "China",
-  "Germany",
-  "Japan",
-  "Singapore",
-  "India",
-  "Australia",
-  "United Kingdom",
-];
-
 export default function SimulationPage() {
-  const [country, setCountry] = useState("China");
+  // Hard-coded list of country names
+  const COUNTRIES = [
+    "United States",
+    "China",
+    "Russia",
+    "Germany",
+    "Japan",
+    "India",
+    "United Kingdom",
+    "Singapore",
+    "Australia",
+    "Brazil",
+    "South Africa",
+  ];
+
+  const CONTINENTS = [
+    "World",
+    "Africa",
+    "Asia",
+    "Europe",
+    "North America",
+    "South America",
+    "Oceania",
+  ];
+
+  const [countries, setCountries] = useState(COUNTRIES);
+  const defaultCountry = COUNTRIES[0];
+  const [country, setCountry] = useState(defaultCountry);
+  const [continent, setContinent] = useState("World");
   const [pdfFile, setPdfFile] = useState(null);
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState("");
   const [error, setError] = useState("");
-
+  const [selectionMode, setSelectionMode] = useState("country"); 
+  const [displayTarget, setDisplayTarget] = useState(null);
   async function handleGenerate() {
     if (!pdfFile) {
       setError("Please upload a PDF to generate a report.");
       return;
     }
+    setDisplayTarget(selectionMode === 'continent' ? continent : country);
     setRunning(true);
     setReport("");
     setError("");
     try {
       const formData = new FormData();
       formData.append("file", pdfFile);
-      formData.append("country", country);
+      formData.append("country", selectionMode === 'continent' ? continent : country);
 
       const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/predict`, {
         method: "POST",
@@ -65,17 +84,50 @@ export default function SimulationPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <label className="block mb-1 font-medium">Country</label>
-                    <select
-                      className="w-full border rounded px-3 py-2"
-                      value={country}
-                      onChange={e => setCountry(e.target.value)}
-                      style={{ backgroundColor: "black", color: "white" }}
-                    >
-                      {countries.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block font-medium">Select by</label>
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          className={`px-3 py-1 rounded ${selectionMode === 'country' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                          onClick={() => setSelectionMode('country')}
+                        >
+                          Country
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-3 py-1 rounded ${selectionMode === 'continent' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                          onClick={() => setSelectionMode('continent')}
+                        >
+                          Continent
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectionMode === 'country' ? (
+                      <select
+                        className="w-full border rounded px-3 py-2"
+                        value={country}
+                        onChange={e => setCountry(e.target.value)}
+                        style={{ backgroundColor: "black", color: "white" }}
+                      >
+                        <option value="" disabled hidden>Select country</option>
+                        {countries.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        className="w-full border rounded px-3 py-2"
+                        value={continent}
+                        onChange={e => setContinent(e.target.value)}
+                        style={{ backgroundColor: "black", color: "white" }}
+                      >
+                        {CONTINENTS.map(ct => (
+                          <option key={ct} value={ct}>{ct}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>
@@ -102,12 +154,27 @@ export default function SimulationPage() {
 
           <div className="lg:w-2/3">
             <div className="rounded-lg p-8" style={{ backgroundColor: "#0b0b0b" }}>
-              <h1 className="text-3xl font-extrabold text-center mb-6">The Expected Impact of Tariffs in {country}</h1>
+              <h1 className="text-3xl font-extrabold text-center mb-6">
+                {displayTarget ? `The Expected Impact of Tariffs in ${displayTarget}` : "Tariff Simulation"}
+              </h1>
 
-              {report ? (
-                <div className="prose prose-invert max-w-none whitespace-pre-line text-sm" style={{ lineHeight: 1.6 }}>
-                  {report}
-                </div>
+              {displayTarget ? (
+                report ? (
+                  <div className="prose prose-invert max-w-none whitespace-pre-line text-sm" style={{ lineHeight: 1.6 }}>
+                    {report}
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-400">
+                    {running ? (
+                      <p className="mb-4">Generating report for {displayTarget}... this may take a moment.</p>
+                    ) : (
+                      <>
+                        <p className="mb-4">No report returned yet for {displayTarget}.</p>
+                        <p className="text-sm">Click &quot;Generate Report&quot; to run the simulation again.</p>
+                      </>
+                    )}
+                  </div>
+                )
               ) : (
                 <div className="text-center text-gray-400">
                   <p className="mb-4">No report yet. Upload a PDF and click &quot;Generate Report&quot; to see predictions and a simulated impact analysis.</p>
