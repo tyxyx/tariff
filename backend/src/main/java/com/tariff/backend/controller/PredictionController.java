@@ -17,14 +17,15 @@ public class PredictionController {
     }
 
     @PostMapping
-    public ResponseEntity<String> predictFromPdf(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> predictFromPdf(@RequestParam("file") MultipartFile file,
+                                                 @RequestParam(value = "country", required = false) String country) {
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body("No file uploaded.");
         }
         if (!file.getContentType().equalsIgnoreCase("application/pdf")) {
             return ResponseEntity.badRequest().body("Only PDF files are accepted.");
         }
-        String result = predictionService.sendPdfToGemini(file);
+        String result = predictionService.sendPdfToGemini(file, country);
         return ResponseEntity.ok(result);
     }
 }

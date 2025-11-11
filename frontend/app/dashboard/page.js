@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calculator, Settings, Users, User, History, Map } from "lucide-react";
+import { Calculator, Settings, Users, User, History, Map , MonitorCog, Monitor } from "lucide-react";
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
@@ -42,6 +42,22 @@ export default function DashboardPage() {
             <CardContent>
               <Link href="/calculator">
                 <Button className="w-full">Start Calculating</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Tariff Simulator (document-based predictions) */}
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader>
+              <MonitorCog className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Tariff Simulator</CardTitle>
+              <CardDescription>
+                Upload policy or news PDFs to generate a country-focused tariff impact report
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/simulation">
+                <Button className="w-full">Open Simulator</Button>
               </Link>
             </CardContent>
           </Card>
