@@ -3,3 +3,5 @@
 /.aws/*
 *.xml
 /__pycache__
+backup.py
+/backups/*

@@ -38,6 +38,6 @@ async def scrape():
 
 async def run_scraping():
     try:
-        await asyncio.to_thread(scrapper.scrape_from_wits)  # Run the blocking function in a thread
+        await asyncio.to_thread(scrapper.main)  # Run the blocking function in a thread
     finally:
         app.is_scrapping = False

@@ -1,404 +1,436 @@
-import psycopg2
-import sys
-import boto3
+#!/usr/bin/env python3
+"""
+Async WITS tariff scraper
+- concurrency: semaphore-controlled (default 50)
+- batch insert size: 200
+- uses asyncpg + aiohttp
+Environment variables required:
+DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+"""
+
 import os
-import requests
-import xml.etree.ElementTree as ET
+import asyncio
+import aiohttp
+import asyncpg
 import time
 import uuid
+import math
+import random
 from datetime import date, timedelta
-
+import xml.etree.ElementTree as ET
+from typing import Dict, List, Any, Tuple
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# AWS
-RDS_ENDPOINT=os.getenv("RDS_ENDPOINT")
-RDS_PORT=os.getenv("RDS_PORT")
-RDS_USERNAME=os.getenv("RDS_USERNAME")
-RDS_REGION=os.getenv("RDS_REGION")
-RDS_DBNAME=os.getenv("RDS_DBNAME")
-RDS_PASSWORD=os.getenv("RDS_PASSWORD")
+# DB config env names (as you specified)
+DB_HOST = os.getenv("LOCAL_ENDPOINT", "mypostgreslink")
+DB_PORT = os.getenv("LOCAL_PORT", "5432")
+DB_USER = os.getenv("LOCAL_USERNAME", "postgres")
+DB_PASSWORD = os.getenv("LOCAL_PASSWORD", "postgrespw")
+DB_NAME = os.getenv("LOCAL_DBNAME", "postgres")
 
-# LOCAL
-LOCAL_ENDPOINT=os.getenv("LOCAL_ENDPOINT")
-LOCAL_PORT=os.getenv("LOCAL_PORT")
-LOCAL_USERNAME=os.getenv("LOCAL_USERNAME")
-LOCAL_DBNAME=os.getenv("LOCAL_DBNAME")
-LOCAL_PASSWORD=os.getenv("LOCAL_PASSWORD")
+# Scraper config
+CONCURRENCY = int(os.getenv("CONCURRENCY", "50"))   # you chose 50
+PAIRS_PER_FLUSH = int(os.getenv("PAIRS_PER_FLUSH", "10"))  # flush after N complete pairs
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "5"))
+RETRY_BASE = float(os.getenv("RETRY_BASE", "0.5"))  # seconds
+API_TIMEOUT = int(os.getenv("API_TIMEOUT", "30"))   # per request timeout seconds
 
-WTO_API_KEY=os.getenv("WTO_API_KEY")
+TOTAL_ORIGINS_DEST = None  # used only for logging when countries known
 
-def connect_postgres(local: bool=True):
-    if local:
-        return psycopg2.connect(host=LOCAL_ENDPOINT, port=LOCAL_PORT, database=LOCAL_DBNAME, user=LOCAL_USERNAME, password=LOCAL_PASSWORD)
-    else:
-        session = boto3.Session(profile_name='RDSCreds', region_name=RDS_REGION) #gets the credentials from .aws/credentials
-        client = session.client('rds')
-        token = client.generate_db_auth_token(DBHostname=RDS_ENDPOINT, Port=RDS_PORT, DBUsername=RDS_USERNAME, Region=RDS_REGION)
-        return psycopg2.connect(host=RDS_ENDPOINT, port=RDS_PORT, database=RDS_DBNAME, user=RDS_USERNAME, password=RDS_PASSWORD)
+# Products list (example list - adjust if needed)
+PRODUCT_LIST = [
+    "847330",
+    "847170",
+    "851712",
+    "847130",
+    "854231"
+]
 
-def write_countries(new_data: dict[str, str], local=False):
-    conn = connect_postgres(local)
-    try:
-        cur = conn.cursor()
-        sql = """INSERT INTO country(code, name)
-VALUES (%s, %s)
-ON CONFLICT (code) DO UPDATE
-SET name = EXCLUDED.name;"""
-        for code, name in new_data.items():
-            cur.execute(sql, (code, name))
-        conn.commit()
-    except Exception as e:
-        print(f"Failed to insert countries", e)
-    finally:
-      conn.close()
-    
-def extract_country_codes_and_names(xml_content):
-    """
-    Extracts country codes and names from the given XML file.
+WITS_CODLIST_URL = "https://wits.worldbank.org/API/V1/SDMX/V21/rest/codelist/all/"
+WITS_TARIFF_URL_TEMPLATE = (
+    "https://wits.worldbank.org/API/V1/SDMX/V21/rest/data/DF_WITS_Tariff_TRAINS/"
+    "A.{destination}.{origin}.{product}.reported/?startperiod=1988&detail=dataOnly"
+)
 
-    Args:
-        xml_file (str): Path to the XML file.
+# SQL statements (lowercase table names, snake_case columns)
+TARIFF_INSERT_SQL = """
+INSERT INTO tariff(
+    id, origin_country_code, dest_country_code, effective_date, expiry_date,
+    ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined
+)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+ON CONFLICT (id) DO UPDATE SET
+    ad_valorem_rate = EXCLUDED.ad_valorem_rate,
+    specific_rate = EXCLUDED.specific_rate,
+    min_quantity = EXCLUDED.min_quantity,
+    max_quantity = EXCLUDED.max_quantity,
+    user_defined = EXCLUDED.user_defined
+RETURNING id;
+"""
 
-    Returns:
-        dict: A dictionary where the keys are country codes and the values are country names.
-    """
+TARIFF_PRODUCT_INSERT_SQL = """
+INSERT INTO tariff_product(tariff_id, hts_code)
+VALUES ($1, $2)
+ON CONFLICT (tariff_id, hts_code) DO NOTHING;
+"""
+
+# Helper: XML parsing functions (adapted from your original impl)
+def extract_country_codes_and_names(xml_content: bytes) -> Dict[str, str]:
     root = ET.fromstring(xml_content)
-
-    # Define the namespace used in the XML file
     namespace = {
         'ns': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message',
         'structure': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure',
         'common': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common'
     }
-
-    # Find the Codelist with id="CL_COUNTRY_WITS"
     codelist = root.find(".//structure:Codelist[@id='CL_COUNTRY_WITS']", namespace)
     if codelist is None:
         print("Codelist with id 'CL_COUNTRY_WITS' not found.")
         return {}
-
-    # Extract all country codes and names
     country_dict = {}
     for code in codelist.findall("structure:Code", namespace):
-        code_id = code.attrib['id']
+        code_id = code.attrib.get('id')
+        if not code_id:
+            continue
+        # your original filter: skip codes where first char is not digit
+        # but that seems odd for country codes; keep original behaviour:
         if not code_id[0].isdigit():
             continue
         name_element = code.find("common:Name", namespace)
         country_name = name_element.text if name_element is not None else "Unknown"
         country_dict[code_id] = country_name
-
     return country_dict
 
-def fetch_country_codes():
-    """
-    Fetches a dictionary of countries and their codes from the World Bank API.
-
-    Returns:
-        dict: A dictionary where the keys are country codes and the values are country names.
-    """
-    url = "https://wits.worldbank.org/API/V1/SDMX/V21/rest/codelist/all/"
-    
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
-        return extract_country_codes_and_names(response.content)
-    except requests.exceptions.RequestException as e:
-        print(f"API request failed: {e}")
-        return None
-
-def parse_tariff_from_content(xml_content: bytes, origin_country: str, destination_country: str) -> dict[str, list[dict]]:
-    """
-    Parses the XML content and returns a dictionary of lists of tariff records grouped by product codes.
-
-    Args:
-        xml_content (bytes): XML content as bytes.
-        origin_country (str): Origin country code.
-        destination_country (str): Destination country code.
-
-    Returns:
-        dict[str, list[dict]]: Dictionary where keys are product codes and values are lists of tariff records.
-    """
+def parse_tariff_from_content(xml_content: bytes, origin_country: str, destination_country: str) -> Dict[str, List[dict]]:
     root = ET.fromstring(xml_content)
-
     namespace = {
         'generic': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic',
         'message': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message'
     }
-
-    records_by_product = {}
+    records_by_product: Dict[str, List[dict]] = {}
     series_list = root.findall(".//generic:Series", namespace)
     if not series_list:
-        print("No series found in the XML content.")
         return records_by_product
-
     for series in series_list:
-        product_code = series.find("generic:SeriesKey/generic:Value[@id='PRODUCTCODE']", namespace).attrib.get("value")
-        if product_code not in records_by_product:
-            records_by_product[product_code] = []
-
+        key = series.find("generic:SeriesKey/generic:Value[@id='PRODUCTCODE']", namespace)
+        if key is None:
+            continue
+        product_code = key.attrib.get("value")
+        if not product_code:
+            continue
+        records_by_product.setdefault(product_code, [])
         for obs in series.findall("generic:Obs", namespace):
-            time_period = obs.find("generic:ObsDimension[@id='TIME_PERIOD']", namespace).attrib.get("value")
-            ad_valorem_rate = obs.find("generic:ObsValue", namespace).attrib.get("value")
-
-            record = {
+            time_dimension = obs.find("generic:ObsDimension[@id='TIME_PERIOD']", namespace)
+            value_element = obs.find("generic:ObsValue", namespace)
+            if time_dimension is None or value_element is None:
+                continue
+            time_period = time_dimension.attrib.get("value")
+            ad_valorem_rate = value_element.attrib.get("value")
+            try:
+                eff_date = date(int(time_period), 1, 1)
+            except Exception:
+                continue
+            try:
+                ad_rate = float(ad_valorem_rate) * 0.01
+            except Exception:
+                ad_rate = 0.0
+            rec = {
                 "id": str(uuid.uuid4()),
-                "originCountry": origin_country,
-                "destinationCountry": destination_country,
-                "effectiveDate": date(int(time_period), 1, 1),
-                "expiryDate": None,  # Assuming no expiry date is provided in the XML
-                "adValoremRate": float(ad_valorem_rate) * 0.01,
-                "specificRate": 0.0,  # Assuming no specific rate is provided in the XML
-                "minQuantity": 0,  # Assuming no minimum quantity is provided in the XML
-                "maxQuantity": 0,  # Assuming no maximum quantity is provided in the XML
-                "userDefined": False  # Assuming the record is not user-defined
+                "origin_country": origin_country,
+                "destination_country": destination_country,
+                "effective_date": eff_date,
+                "expiry_date": None,
+                "ad_valorem_rate": ad_rate,
+                "specific_rate": 0.0,
+                "min_quantity": 0,
+                "max_quantity": 0,
+                "user_defined": False
             }
-            records_by_product[product_code].append(record)
-
+            records_by_product[product_code].append(rec)
     return records_by_product
 
-def fetch_tariff(origin, destination, products=["847130", "847170", "847330", "851712", "854231"]):
-    url = "https://wits.worldbank.org/API/V1/SDMX/V21/rest/data/DF_WITS_Tariff_TRAINS/A.{destination}.{origin}.{product}.reported/?startperiod=1988&detail=dataOnly".format(origin=origin, destination=destination, product="+".join(products))
-    
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
-        records = parse_tariff_from_content(response.content, origin, destination)
-        return records
-    except requests.exceptions.RequestException as e:
-        print(f"API request failed: {e}")
-        return None
+def format_rec(records):
+    for r in records:
+        print(f"{r["effective_date"]}, {r["expiry_date"]}, {r["ad_valorem_rate"]}, {r["specific_rate"]}")
 
-def clean_tariff(records):
+def clean_tariff(records: List[dict]) -> List[dict]:
+    if not records:
+        return []
+    records.sort(key=lambda x: x["effective_date"])
     result = []
     curr = records[0]
-    # Sort the records list in place by effectiveDate
-    records.sort(key=lambda x: x["effectiveDate"])
     for record in records[1:]:
-        if not (record["adValoremRate"] == curr["adValoremRate"] and \
-        record["specificRate"] == curr["specificRate"] and \
-        record["minQuantity"] == curr["minQuantity"] and \
-        record["maxQuantity"] == curr["maxQuantity"]):
-            curr["expiryDate"] = record["effectiveDate"] - timedelta(days=1)
+        if not (
+            math.isclose(record["ad_valorem_rate"], curr["ad_valorem_rate"], rel_tol=1e-9)
+            and math.isclose(record["specific_rate"], curr["specific_rate"], rel_tol=1e-9)
+            and record["min_quantity"] == curr["min_quantity"]
+            and record["max_quantity"] == curr["max_quantity"]
+        ):
+            # set expiry to day before next effective
+            curr["expiry_date"] = record["effective_date"] - timedelta(days=1)
             result.append(curr)
             curr = record
     result.append(curr)
     return result
 
-def write_tariff(record: dict, HTSCode: str, local=False) -> int:
-    """
-    Inserts a single tariff record into the database and returns the ID of the inserted record.
+# Async fetch helpers
+async def fetch_bytes_with_retries(session: aiohttp.ClientSession, url: str, semaphore: asyncio.Semaphore) -> bytes | None:
+    backoff = RETRY_BASE
+    for attempt in range(1, MAX_RETRIES + 1):
+        async with semaphore:
+            try:
+                async with session.get(url, timeout=API_TIMEOUT) as resp:
+                    if resp.status == 200:
+                        return await resp.read()
+                    elif resp.status in (429, 503):
+                        # transient: retry
+                        pass
+                    else:
+                        txt = await resp.text()
+                        print(f"Non-retryable status {resp.status} for {url}: {txt[:200]}")
+                        return None
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                # treat as transient
+                pass
+        # jittered backoff
+        jitter = random.random() * 0.1 * backoff
+        await asyncio.sleep(backoff + jitter)
+        backoff *= 2
+    print(f"Max retries exceeded for {url}")
+    return None
 
-    Args:
-        record (dict): A dictionary containing tariff record data.
-        HTSCode (str): The product code associated with the tariff.
+async def fetch_country_codes_async(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore) -> Dict[str, str]:
+    data = await fetch_bytes_with_retries(session, WITS_CODLIST_URL, semaphore)
+    if not data:
+        return {}
+    return extract_country_codes_and_names(data)
 
-    Returns:
-        int: The ID of the inserted record, or None if the insertion failed.
-    """
-    conn = connect_postgres(local)
-    cur = conn.cursor()
-    insert_sql = """INSERT INTO tariff(id, "origin_country_ode", "dest_country_code", "effectiv_date", "expiry_date", "ad_valorem_rate", "specific_rate", "min_quantity", "max_quantity", "user_defined", "enabled")
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
-RETURNING id;"""  # Use RETURNING to fetch the ID of the inserted record
-
-    search_sql = """SELECT * FROM public.tariff_product, public.tariff
-WHERE public.tariff_product."tariff_id" = public.tariff.id
-AND "origin_country_code" = %s 
-AND "dest_country_code" = %s 
-AND "effective_date" = %s 
-AND "expiry_date" = %s 
-AND "hts_code" = %s"""
-
-    update_sql = """UPDATE tariff
-SET
-    "ad_valorem_rate" = %s,
-    "specific_rate" = %s,
-    "min_quantity" = %s,
-    "max_quantity" = %s,
-    "user_defined" = %s
-WHERE
-    "origin_country_code" = %s
-    AND "dest_country_code" = %s
-    AND "effective_date" = %s
-    AND "expiry_date" = %s;
-"""
-
-    try:
-        cur.execute(search_sql, (
-            record["originCountry"],
-            record["destinationCountry"],
-            record["effectiveDate"],
-            record["expiryDate"],
-            HTSCode
-        ))
-        search_result = cur.fetchone()
-
-        if search_result:
-            cur.execute(update_sql, (
-              record["adValoremRate"],
-              record["specificRate"],
-              record["minQuantity"],
-              record["maxQuantity"],
-              record["userDefined"],
-              record["originCountry"],
-              record["destinationCountry"],
-              record["effectiveDate"],
-              record["expiryDate"],
-            ))
-            conn.commit()
-            return
-      
-        cur.execute(insert_sql, (
-            str(record["id"]),
-            record["originCountry"],
-            record["destinationCountry"],
-            record["effectiveDate"],
-            record["expiryDate"],
-            record["adValoremRate"],
-            record["specificRate"],
-            record["minQuantity"],
-            record["maxQuantity"],
-            record["userDefined"]
-        ))
-
-        # Fetch the ID of the inserted record
-        inserted_id = cur.fetchone()
-        if inserted_id:
-            link_sql = """INSERT INTO tariff_product("hts_code", "tariff_id")
-            VALUES (%s, %s)
-            ON CONFLICT ("hts_code", "tariff_id") DO NOTHING"""
-            cur.execute(link_sql, (HTSCode, inserted_id[0]))
-            conn.commit()
-        return inserted_id[0] if inserted_id else None
-    except Exception as e:
-        print(f"Failed to insert tariff record: {e}")
+async def fetch_tariff_for_pair(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, origin: str, destination: str, products: List[str]) -> Dict[str, List[dict]] | None:
+    product_join = "+".join(products)
+    url = WITS_TARIFF_URL_TEMPLATE.format(origin=origin, destination=destination, product=product_join)
+    data = await fetch_bytes_with_retries(session, url, semaphore)
+    if not data:
         return None
-    finally:
-        conn.close()
+    return parse_tariff_from_content(data, origin, destination)
 
-def scrape_from_wits():
-    start_time = time.time()
-    print("Retrieving country information")
-    country_dict = fetch_country_codes()
-    print("writing to db")
-    write_countries(country_dict)
-    print("Countries information saved to db\n")
-    product_list = [
-        "847330",
-        "847170",
-        "851712",
-        "847130",
-        "854231"
-    ]
-    country_dict
-    for origin_country_code in country_dict.keys():
-        for destination_country_code in country_dict.keys():
-            if (destination_country_code == "000"):
-                continue
-            if origin_country_code != destination_country_code:
-                print(f"Fetching data [origin: {origin_country_code}, dest: {destination_country_code}]")
-                records = fetch_tariff(origin_country_code, destination_country_code, product_list)
-                if not records:
-                    print("No records found")
-                    continue
-                for product_code in records:
-                    tariffs = clean_tariff(records[product_code])
-                    print(f"Wrting to db")
-                    for r in tariffs:
-                        write_tariff(r, product_code)
-                    print(f"Saved tariff [origin: {origin_country_code}, dest: {destination_country_code}, prod: {product_code}]")
-    print(f"Program completed in {time.time() - start_time:.2f} seconds.")
-
-def migrate_local_to_aws(overwrite = False):
-    try:
-        local_conn = connect_postgres(True)
-        aws_conn = connect_postgres(False)
-
-        cur = local_conn.cursor()
-        sql = "SELECT * FROM country"
-        cur.execute(sql)
-        countries = cur.fetchall()
-
-        sql = "SELECT * FROM tariff"
-        cur.execute(sql)
-        tariffs = cur.fetchall()
-
-        sql = "SELECT * FROM product"
-        cur.execute(sql)
-        products = cur.fetchall()
-
-        sql = "SELECT * FROM tariff_product"
-        cur.execute(sql)
-        tariff_product = cur.fetchall()
-
-        cur = aws_conn.cursor()
-        sql = """INSERT INTO country(code, name)
-                VALUES (%s, %s)
-                ON CONFLICT (code)"""
-        if overwrite:
-            sql += """ DO UPDATE
-                SET name = EXCLUDED.name;"""
-        else:
-            sql += " DO NOTHING"
-        for country in countries:
-            cur.execute(sql, country)
-
-        sql = """INSERT INTO product(hts_code, description, name, enabled)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (hts_code)"""
-        if overwrite:
-            sql += """ DO UPDATE
-                SET 
-                    name = EXCLUDED.name,
-                    description = EXCLUDED.description,
-                    enabled = EXCLUDED.enabled;"""
-        else:
-            sql += " DO NOTHING;"
-        for product in products:
-            cur.execute(sql, product)
-
-        sql = """INSERT INTO tariff(id, origin_country_code, dest_country_code, effective_date, expiry_date, ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined, enabled)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
-                ON CONFLICT (id)"""
-        if overwrite:
-            sql += """ DO UPDATE
-                SET 
-                    origin_country_code = EXCLUDED.origin_country_code,
-                    dest_country_code = EXCLUDED.dest_country_code,
-                    effective_date = EXCLUDED.effective_date,
-                    expiry_date = EXCLUDED.expiry_date,
-                    ad_valorem_rate = EXCLUDED.ad_valorem_rate,
-                    specific_rate = EXCLUDED.specific_rate,
-                    min_quantity = EXCLUDED.min_quantity,
-                    max_quantity = EXCLUDED.max_quantity,
-                    user_defined = EXCLUDED.user_defined;"""
-        else:
-            sql += " DO NOTHING;"
-        for tariff in tariffs:
-            cur.execute(sql, tariff)
-
-        sql = """INSERT INTO tariff_product(hts_code, tariff_id)
-                VALUES (%s, %s)
-                ON CONFLICT (hts_code, tariff_id)"""
-        if overwrite:
-            sql += """ DO UPDATE
-                SET 
-                    hts_code = EXCLUDED.hts_code,
-                    tariff_id = EXCLUDED.tariff_id;"""
-        else:
-            sql += " DO NOTHING;"
-        for tp in tariff_product:
-            cur.execute(sql, tp)
-
-        aws_conn.commit()
-        print("Migration done and saved to AWS RDS instance")
-    except:
-        print(tariff)
-    finally:
-        local_conn.close()
-        aws_conn.close()
+# DB flush helpers - FIXED VERSION
+async def flush_batches(pool: asyncpg.pool.Pool, tariff_rows: List[Tuple], product_links: Dict[str, str]):
+    if not tariff_rows or not product_links:
+        return
     
-# if __name__ == "__main__":
-#     scrape_from_wto()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            # Create temp table with incoming data
+            await conn.execute("""
+                CREATE TEMP TABLE incoming_tariffs (
+                    temp_id UUID,
+                    origin_country_code TEXT,
+                    dest_country_code TEXT,
+                    effective_date DATE,
+                    expiry_date DATE,
+                    ad_valorem_rate NUMERIC,
+                    specific_rate NUMERIC,
+                    min_quantity INTEGER,
+                    max_quantity INTEGER,
+                    user_defined BOOLEAN,
+                    hts_code TEXT
+                ) ON COMMIT DROP
+            """)
+            
+            # Bulk insert into temp table
+            temp_rows = []
+            for row in tariff_rows:
+                temp_id = row[0]
+                hts_code = product_links.get(temp_id)
+                if hts_code:
+                    temp_rows.append((*row, hts_code))
+            
+            await conn.executemany("""
+                INSERT INTO incoming_tariffs VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+            """, temp_rows)
+            
+            # Find existing matches with a single JOIN
+            existing = await conn.fetch("""
+                SELECT 
+                    i.temp_id,
+                    t.id as existing_id,
+                    t.ad_valorem_rate as existing_ad_valorem,
+                    t.specific_rate as existing_specific,
+                    i.ad_valorem_rate as new_ad_valorem,
+                    i.specific_rate as new_specific
+                FROM incoming_tariffs i
+                INNER JOIN tariff t 
+                    ON t.origin_country_code = i.origin_country_code
+                    AND t.dest_country_code = i.dest_country_code
+                    AND t.effective_date = i.effective_date
+                    AND COALESCE(t.expiry_date, '9999-12-31'::date) = COALESCE(i.expiry_date, '9999-12-31'::date)
+                INNER JOIN tariff_product tp 
+                    ON tp.tariff_id = t.id 
+                    AND tp.hts_code = i.hts_code
+            """)
+            
+            # Determine what needs updating
+            to_update = []
+            existing_temp_ids = set()
+            for row in existing:
+                existing_temp_ids.add(str(row['temp_id']))
+                if (not math.isclose(row['existing_ad_valorem'], row['new_ad_valorem'], rel_tol=1e-9) or
+                    not math.isclose(row['existing_specific'], row['new_specific'], rel_tol=1e-9)):
+                    to_update.append(row['existing_id'])
+            
+            # Update existing
+            if to_update:
+                await conn.execute("""
+                    UPDATE tariff t
+                    SET ad_valorem_rate = i.ad_valorem_rate,
+                        specific_rate = i.specific_rate,
+                        min_quantity = i.min_quantity,
+                        max_quantity = i.max_quantity,
+                        user_defined = i.user_defined
+                    FROM incoming_tariffs i
+                    INNER JOIN tariff_product tp ON tp.hts_code = i.hts_code
+                    WHERE t.id = tp.tariff_id
+                        AND t.origin_country_code = i.origin_country_code
+                        AND t.dest_country_code = i.dest_country_code
+                        AND t.effective_date = i.effective_date
+                        AND COALESCE(t.expiry_date, '9999-12-31'::date) = COALESCE(i.expiry_date, '9999-12-31'::date)
+                        AND t.id = ANY($1::uuid[])
+                """, to_update)
+                print(f"  Updated {len(to_update)} existing tariffs")
+            
+            # Insert new records (those not in existing_temp_ids)
+            new_tariffs = [row for row in temp_rows if row[0] not in existing_temp_ids]
+            if new_tariffs:
+                id_mapping = {}
+                for row in new_tariffs:
+                    result = await conn.fetch("""
+                        INSERT INTO tariff(
+                            id, origin_country_code, dest_country_code, effective_date, expiry_date,
+                            ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined
+                        )
+                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                        RETURNING id
+                    """, *row[:10])
+                    id_mapping[row[0]] = str(result[0]["id"])
+                
+                # Insert product links
+                product_rows = [(id_mapping[row[0]], row[10]) for row in new_tariffs if row[0] in id_mapping]
+                if product_rows:
+                    await conn.executemany("""
+                        INSERT INTO tariff_product(tariff_id, hts_code)
+                        VALUES ($1, $2)
+                    """, product_rows)
+                
+                print(f"  Inserted {len(new_tariffs)} new tariffs")
+
+# Coordinator: runs the full scraping
+async def run_scrape():
+    start = time.time()
+    semaphore = asyncio.Semaphore(CONCURRENCY)
+    db_dsn = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    pool = await asyncpg.create_pool(dsn=db_dsn, min_size=1, max_size=max(2, CONCURRENCY // 4 + 1))
+    print(f"Connected to DB pool. concurrency={CONCURRENCY}, pairs_per_flush={PAIRS_PER_FLUSH}")
+
+    timeout = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=API_TIMEOUT)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        print("Fetching country codes...")
+        country_dict = await fetch_country_codes_async(session, semaphore)
+        if not country_dict:
+            print("No countries found — exiting.")
+            await pool.close()
+            return
+        countries = list(country_dict.keys())
+        total_pairs = len(countries) * (len(countries) - 1)
+        print(f"Found {len(countries)} countries => {total_pairs} origin-destination pairs (excluding same-country).")
+        global TOTAL_ORIGINS_DEST
+        TOTAL_ORIGINS_DEST = total_pairs
+
+        # Atomic pair buffering: collect complete pairs, flush every 10 pairs
+        tariff_rows_buffer: List[Tuple] = []
+        product_links_buffer: Dict[str, str] = dict() # tariff_id -> hts_code
+        pairs_in_buffer = 0  # count complete pairs added to buffer
+        processed_pairs = 0
+        saved_tariffs = 0
+        
+        # Lock for atomic buffer operations
+        buffer_lock = asyncio.Lock()
+
+        async def handle_pair(origin: str, destination: str):
+            nonlocal tariff_rows_buffer, product_links_buffer, pairs_in_buffer, processed_pairs, saved_tariffs
+            
+            # Fetch data (async, no lock needed)
+            records_map = await fetch_tariff_for_pair(session, semaphore, origin, destination, PRODUCT_LIST)
+            
+            # Process the pair's data into temporary local buffers
+            pair_tariff_rows: List[Tuple] = []
+            pair_product_links: Dict[str, str] = {}
+            
+            if records_map:
+                for product_code, records in records_map.items():
+                    cleaned = clean_tariff(records)
+                    for rec in cleaned:
+                        # build tariff row tuple in the same column order as TARIFF_INSERT_SQL
+                        tariff_row = (
+                            rec["id"],
+                            rec["origin_country"],
+                            rec["destination_country"],
+                            rec["effective_date"],
+                            rec["expiry_date"],
+                            rec["ad_valorem_rate"],
+                            rec["specific_rate"],
+                            rec["min_quantity"],
+                            rec["max_quantity"],
+                            rec["user_defined"]
+                        )
+                        pair_tariff_rows.append(tariff_row)
+                        pair_product_links[rec["id"]] = product_code
+            
+            # Atomically add this pair's data to the buffer
+            async with buffer_lock:
+                processed_pairs += 1
+                
+                if pair_tariff_rows:
+                    # Add entire pair atomically
+                    tariff_rows_buffer.extend(pair_tariff_rows)
+                    product_links_buffer.update(pair_product_links)
+                    pairs_in_buffer += 1
+                    saved_tariffs += len(pair_tariff_rows)
+                    
+                    # Flush when we've accumulated enough complete pairs
+                    if pairs_in_buffer >= PAIRS_PER_FLUSH:
+                        print(f"Flushing {pairs_in_buffer} pairs ({len(tariff_rows_buffer)} tariffs) to DB...")
+                        await flush_batches(pool, tariff_rows_buffer, product_links_buffer)
+                        tariff_rows_buffer = []
+                        product_links_buffer = {}
+                        pairs_in_buffer = 0
+                
+                # periodic progress log
+                if processed_pairs % 100 == 0:
+                    print(f"[{processed_pairs}/{total_pairs}] processed. saved_tariffs={saved_tariffs}. pairs_in_buffer={pairs_in_buffer}")
+
+        # Create all pair tasks - dispatch async requests
+        pair_list = [(o, d) for o in countries for d in countries if o != d and d != "000"]
+        
+        # Submit all tasks at once - semaphore controls concurrency
+        print(f"Dispatching {len(pair_list)} async requests...")
+        tasks = [asyncio.create_task(handle_pair(o, d)) for (o, d) in pair_list]
+        await asyncio.gather(*tasks)
+
+        # flush any remaining rows
+        async with buffer_lock:
+            if tariff_rows_buffer or product_links_buffer:
+                print(f"Final flush: {pairs_in_buffer} pairs ({len(tariff_rows_buffer)} tariffs)")
+                await flush_batches(pool, tariff_rows_buffer, product_links_buffer)
+
+        await pool.close()
+        elapsed = time.time() - start
+        print(f"Scrape complete. total pairs processed: {processed_pairs}. total tariffs inserted: ~{saved_tariffs}. elapsed: {elapsed:.1f}s")
+
+# Entrypoint
+def main():
+    print("Starting scraper (async)...")
+    asyncio.run(run_scrape())
+
+if __name__ == "__main__":
+    main()
