@@ -11,10 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import com.tariff.backend.exception.user.UserAlreadyExistsException;
-import com.tariff.backend.exception.user.UserNotFoundException;
-import com.tariff.backend.exception.user.InvalidCredentialsException;
-
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -36,7 +32,7 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<String> handleResourceNotFound(NotFoundException ex) {
-    return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    return new ResponseEntity<>(ex.getMessage(), HttpStatus.NO_CONTENT);
   }
 
   @ExceptionHandler(InternalServerErrorException.class)

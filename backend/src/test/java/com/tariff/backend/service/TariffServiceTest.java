@@ -1,22 +1,20 @@
 package com.tariff.backend.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.tariff.backend.dto.AddTariffDTO;
@@ -24,8 +22,10 @@ import com.tariff.backend.dto.ParticularTariffDTO;
 import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.exception.NotFoundException;
+import com.tariff.backend.model.Country;
 import com.tariff.backend.model.Product;
 import com.tariff.backend.model.Tariff;
+import com.tariff.backend.repository.CountryRepository;
 import com.tariff.backend.repository.ProductRepository;
 import com.tariff.backend.repository.TariffRepository;
 
@@ -38,13 +38,28 @@ class TariffServiceTest {
     @Mock
     private ProductRepository productRepository;
 
-    @InjectMocks
+    @Mock
+    private CountryRepository countryRepository;
+
     private TariffService tariffService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void init() {
+        tariffService = new TariffService(tariffRepository, productRepository, countryRepository);
+    }
 
     @Test
     void addTariffShouldPersistEntity() {
         AddTariffDTO request = buildAddTariffDTO();
-        when(tariffRepository.getTariffsByHtsCode(request.getHtscode())).thenReturn(List.of());
+    when(tariffRepository.getTariffsByHtsCode(request.getHtscode())).thenReturn(List.of());
+    // countries lookup
+    Country cn = new Country(); cn.setCode("CN"); cn.setName("China");
+    Country us = new Country(); us.setCode("US"); us.setName("United States");
+    when(countryRepository.findById("CN")).thenReturn(Optional.of(cn));
+    when(countryRepository.findById("US")).thenReturn(Optional.of(us));
+        // product lookup/create path
+        when(productRepository.findById(request.getHtscode())).thenReturn(Optional.empty());
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(tariffRepository.save(any(Tariff.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Tariff saved = tariffService.addTariff(request);
@@ -53,15 +68,14 @@ class TariffServiceTest {
         verify(tariffRepository, times(1)).save(captor.capture());
         Tariff persisted = captor.getValue();
 
-        assertThat(persisted.getHTSCode()).isEqualTo(request.getHtscode());
-        assertThat(persisted.getOriginCountry()).isEqualTo(request.getOriginCountry());
-        assertThat(persisted.getDestCountry()).isEqualTo(request.getDestCountry());
+        assertThat(persisted.getOriginCountry().getCode()).isEqualTo(request.getOriginCountry());
+        assertThat(persisted.getDestCountry().getCode()).isEqualTo(request.getDestCountry());
         assertThat(persisted.getEffectiveDate()).isEqualTo(request.getEffectiveDate());
         assertThat(persisted.getExpiryDate()).isEqualTo(request.getExpiryDate());
-        assertThat(persisted.getRate()).isEqualTo(request.getRate());
-        assertThat(persisted.isEnabled()).isEqualTo(request.isEnabled());
+        assertThat(persisted.getAdValoremRate()).isEqualTo(request.getRate());
         assertThat(persisted.getProducts()).hasSize(1);
-        Product product = persisted.getProducts().get(0);
+        Product product = persisted.getProducts().iterator().next();
+        assertThat(product.getHTS_code()).isEqualTo(request.getHtscode());
         assertThat(product.getName()).isEqualTo(request.getProducts().get(0).getName());
         assertThat(product.getDescription()).isEqualTo(request.getProducts().get(0).getDescription());
         assertThat(saved).isSameAs(persisted);
@@ -73,12 +87,17 @@ class TariffServiceTest {
         request.setEffectiveDate(LocalDate.of(2024, 7, 1));
         request.setExpiryDate(LocalDate.of(2024, 12, 31));
 
-        Tariff existing = new Tariff();
-        existing.setHTSCode(request.getHtscode());
-        existing.setOriginCountry(request.getOriginCountry());
-        existing.setDestCountry(request.getDestCountry());
+    Tariff existing = new Tariff();
+    Country cn = new Country(); cn.setCode("CN");
+    Country us = new Country(); us.setCode("US");
+    existing.setOriginCountry(cn);
+    existing.setDestCountry(us);
         existing.setExpiryDate(LocalDate.of(2024, 6, 30));
         when(tariffRepository.getTariffsByHtsCode(request.getHtscode())).thenReturn(List.of(existing));
+    when(countryRepository.findById("CN")).thenReturn(Optional.of(cn));
+    when(countryRepository.findById("US")).thenReturn(Optional.of(us));
+        when(productRepository.findById(request.getHtscode())).thenReturn(Optional.empty());
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(tariffRepository.save(any(Tariff.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         tariffService.addTariff(request);
@@ -101,14 +120,15 @@ class TariffServiceTest {
     @Test
     void updateTariffShouldApplyIncomingValues() {
         UUID id = UUID.randomUUID();
-        Tariff existing = buildTariff();
+    Tariff existing = buildTariff();
         existing.setId(id);
 
         Tariff incoming = new Tariff();
-        incoming.setHTSCode("9999.00");
-        incoming.setOriginCountry("SG");
-        incoming.setDestCountry("US");
-        incoming.setRate(12.5);
+    Country sg = new Country(); sg.setCode("SG");
+    Country us = new Country(); us.setCode("US");
+    incoming.setOriginCountry(sg);
+    incoming.setDestCountry(us);
+    incoming.setAdValoremRate(12.5);
         incoming.setEffectiveDate(LocalDate.of(2024, 1, 10));
         incoming.setExpiryDate(LocalDate.of(2024, 12, 31));
 
@@ -117,10 +137,9 @@ class TariffServiceTest {
 
         Tariff updated = tariffService.updateTariff(id, incoming);
 
-        assertThat(updated.getHTSCode()).isEqualTo("9999.00");
-        assertThat(updated.getOriginCountry()).isEqualTo("SG");
-        assertThat(updated.getDestCountry()).isEqualTo("US");
-        assertThat(updated.getRate()).isEqualTo(12.5);
+        assertThat(updated.getOriginCountry().getCode()).isEqualTo("SG");
+        assertThat(updated.getDestCountry().getCode()).isEqualTo("US");
+        assertThat(updated.getAdValoremRate()).isEqualTo(12.5);
         assertThat(updated.getEffectiveDate()).isEqualTo(LocalDate.of(2024, 1, 10));
         assertThat(updated.getExpiryDate()).isEqualTo(LocalDate.of(2024, 12, 31));
         verify(tariffRepository).save(existing);
@@ -139,7 +158,7 @@ class TariffServiceTest {
 
     @Test
     void getParticularTariffShouldReturnMatch() {
-        ParticularTariffDTO dto = new ParticularTariffDTO();
+    ParticularTariffDTO dto = new ParticularTariffDTO();
         dto.setProductName("Widgets");
         dto.setOriginCountry("SG");
         dto.setDestCountry("US");
@@ -179,26 +198,24 @@ class TariffServiceTest {
         dto.setEffectiveDate(LocalDate.of(2024, 1, 1));
         dto.setExpiryDate(LocalDate.of(2024, 6, 30));
         dto.setRate(5.0);
-        dto.setEnabled(true);
         dto.setHtscode("1234.56");
 
         ProductDTO productDTO = new ProductDTO();
         productDTO.setName("Widgets");
         productDTO.setDescription("Widget Description");
-        productDTO.setEnabled(true);
         dto.setProducts(List.of(productDTO));
         return dto;
     }
 
     private Tariff buildTariff() {
         Tariff tariff = new Tariff();
-        tariff.setHTSCode("1234.56");
-        tariff.setOriginCountry("CN");
-        tariff.setDestCountry("US");
-        tariff.setRate(5.0);
+        Country cn = new Country(); cn.setCode("CN");
+        Country us = new Country(); us.setCode("US");
+        tariff.setOriginCountry(cn);
+        tariff.setDestCountry(us);
+        tariff.setAdValoremRate(5.0);
         tariff.setEffectiveDate(LocalDate.of(2024, 1, 1));
         tariff.setExpiryDate(LocalDate.of(2024, 6, 30));
-        tariff.setEnabled(true);
         return tariff;
     }
 }
