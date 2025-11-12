@@ -35,14 +35,14 @@ export default function CalculatorPage() {
   // Fetch countries and products on page load
   useEffect(() => {
     fetch(
-      `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/countries`
+      `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/countries`
     )
       .then((res) => res.json())
       .then((data) => setCountries(data))
       .catch(() => setCountries([]));
 
     fetch(
-      `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/products`
+      `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/products`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -61,7 +61,7 @@ export default function CalculatorPage() {
       const formattedDate = calculationDate.toISOString().split("T")[0];
       // TODO: change this to process.env
       fetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/particular-tariff-rate`,
+        `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/tariffs/particular-tariff-rate`,
         {
           method: "POST",
           headers: {

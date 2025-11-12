@@ -74,7 +74,7 @@ export default function HeatmapPage() {
 			const fetchFromServer = async () => {
 				try {
 					setError(null);
-					const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`);
+					const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/tariffs`);
 					if (!res.ok) throw new Error(`Status ${res.status}`);
 					const data = await res.json();
 					const list = data || [];
@@ -99,7 +99,7 @@ export default function HeatmapPage() {
 			setLoading(true);
 			setError(null);
 			try {
-				const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`);
+				const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/tariffs`);
 				if (!res.ok) throw new Error(`Status ${res.status}`);
 				const data = await res.json();
 				const list = data || [];

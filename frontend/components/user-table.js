@@ -28,7 +28,7 @@ export function UserTable() {
     try {
       setLoading(true);
       const res = await apiFetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/`
+        `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/`
       );
       if (!res.ok) {
         throw new Error(`Failed to fetch users. Status: ${res.status}`);
@@ -51,10 +51,10 @@ export function UserTable() {
         // Fetch current user and all users at the same time
         const [meRes, usersRes] = await Promise.all([
           apiFetch(
-            `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+            `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/me`
           ),
           apiFetch(
-            `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/`
+            `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/`
           ),
         ]);
 
@@ -91,7 +91,7 @@ export function UserTable() {
     setActionError(null);
     try {
       const res = await apiFetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/`,
+        `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/`,
         {
           method: "DELETE",
           headers: {
@@ -116,7 +116,7 @@ export function UserTable() {
     setActionError(null);
     try {
       const res = await apiFetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/upgrade-role`,
+        `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/upgrade-role`,
         {
           method: "PUT",
           headers: {
@@ -143,7 +143,7 @@ export function UserTable() {
     setActionError(null);
     try {
       const res = await apiFetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/downgrade-role`,
+        `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/downgrade-role`,
         {
           method: "PUT",
           headers: {

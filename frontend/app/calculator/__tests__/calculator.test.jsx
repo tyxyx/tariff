@@ -62,7 +62,7 @@ describe('CalculatorPage', () => {
   });
 
   it('fetches tariff rate and updates summary when inputs are provided', async () => {
-    process.env = { ...process.env, NEXT_PUBLIC_API_URL: 'http://mock.api' };
+    process.env = { ...process.env, NEXT_PUBLIC_BACKEND_EC2_HOST: 'http://mock.api' };
 
     const mockFetch = jest.fn().mockResolvedValue({
       json: () => Promise.resolve({ tariffRate: 0.2, rate: 0.2 }),
@@ -85,7 +85,7 @@ describe('CalculatorPage', () => {
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/particular-tariff-rate`);
+    expect(url).toBe(`${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/tariffs/particular-tariff-rate`);
     expect(options).toMatchObject({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

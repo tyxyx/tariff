@@ -15,7 +15,7 @@ export default function PageHeader() {
     loading,
     error,
   } = useApiData(
-    `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+    `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/me`
   );
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function PageHeader() {
   const handleLogout = async () => {
     try {
       await fetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/logout`,
+        `${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}/api/users/logout`,
         {
           method: "POST",
           credentials: "include", // Send cookie to backend
