@@ -14,13 +14,6 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // // Password validation function, handled in backend
-  // const isPasswordValid = (password) => {
-  //   return (
-  //     password.length >= 8 && /[A-Z]/.test(password) && /\d/.test(password)
-  //   );
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -32,46 +25,13 @@ export default function DashboardPage() {
     }
 
     if (currentPassword === newPassword) {
-      setError("The new password cannot be the same as the current password. Please choose a different password.");
+      setError(
+        "The new password cannot be the same as the current password. Please choose a different password."
+      );
       return;
     }
-    // if (!isPasswordValid(newPassword)) {
-    //   setError(
-    //     "New password must be at least 8 characters, contain an uppercase letter and a number."
-    //   );
-    //   return;
-    // }
 
-    // // Get the token from the cookie
-    // const token = Cookies.get("authToken");
-    // if (!token) {
-    //   setError("Authentication token not found.");
-    //   return;
-    // }
-
-    // // extracct email from jwt headers instead of localStorage
-    // try {
-    //   const decoded = jwtDecode(token);
-    //   const email = decoded.email || decoded.sub;
-    //   if (!email) {
-    //     setError("Email not found in the token payload.");
-    //     return;
-    //   }
-    // } catch (error) {
-    //   // replace with backend error
-    //   console.error("JWT Decode Error:", error);
-    //   setError("Invalid authentication token.");
-    //   return;
-    // }
-
-    // // Changed to extract from jwt headers
-    // const email = localStorage.getItem("userEmail");
-    // if (!email) {
-    //   setError("User not logged in.");
-    //   return;
-    // }
-
-try {
+    try {
       const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/users/change-password`,
         {
@@ -94,7 +54,6 @@ try {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      
     } catch (err) {
       setError("An error occurred. Please try again.");
     }
@@ -161,9 +120,9 @@ try {
                 <Button
                   type="submit"
                   disabled={
-                    !currentPassword || 
-                    !newPassword || 
-                    !confirmPassword|| 
+                    !currentPassword ||
+                    !newPassword ||
+                    !confirmPassword ||
                     newPassword !== confirmPassword
                   }
                 >

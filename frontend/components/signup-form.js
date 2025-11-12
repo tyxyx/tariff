@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { LoginInput } from "@/components/login-form";
 
-export function SignupForm() {
+export function SignupForm({ isAdmin = false, onSuccess }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +51,13 @@ export function SignupForm() {
       }
 
       setSuccess("Account created successfully!");
+
+      if (isAdmin) {
+        if (onSuccess) onSuccess();
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Show success
+        setIsLoading(false); // Re-enable form
+        return;
+      }
 
       // This creates a 2-second (2000ms) delay
       await new Promise((resolve) => setTimeout(resolve, 2000));

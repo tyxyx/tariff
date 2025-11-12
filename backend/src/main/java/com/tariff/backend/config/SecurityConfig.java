@@ -72,7 +72,7 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.PUT, "/api/users/downgrade-role").hasRole("SUPER_ADMIN")
 
           // 4. ADMIN and SUPER_ADMIN Rules
-          .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can view all"
+          .requestMatchers(HttpMethod.GET, "/api/users/").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can view all"
           .requestMatchers(HttpMethod.PUT, "/api/users/upgrade-role").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can upgrade user"
 
           // No specific delete for super-admin; it's covered by the ADMIN/SUPER_ADMIN rule below.

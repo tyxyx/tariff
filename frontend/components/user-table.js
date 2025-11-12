@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/confirm-dialog"; // Reusable Dialog
 import { colors } from "@/styles/colors";
 import { apiFetch } from "@/utils/apiClient";
@@ -15,6 +14,7 @@ export function UserTable() {
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
 
   //  To track the intended action (delete or role change) and the new role
   const [dialogAction, setDialogAction] = useState({
@@ -54,17 +54,15 @@ export function UserTable() {
           apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/`),
         ]);
 
-        // 1. Handle the /me response
         if (!meRes.ok) {
           throw new Error(
             `Failed to fetch current user. Status: ${meRes.status}`
           );
         }
         const meData = await meRes.json();
-        // Based on your code, the 'username' field holds the email
         setCurrentUserEmail(meData.username);
+        setCurrentUserRole(meData.role);
 
-        // 2. Handle the /users response
         if (!usersRes.ok) {
           throw new Error(
             `Failed to fetch user list. Status: ${usersRes.status}`
@@ -81,7 +79,7 @@ export function UserTable() {
     };
 
     fetchInitialData();
-  }, []); // Empty dependency array so this runs once on mount
+  }, []);
 
   // --- API Functions ---
 
@@ -127,7 +125,7 @@ export function UserTable() {
       );
       if (res.ok) {
         alert(`Role updated to ${newRole} successfully!`);
-        fetchUsers(); // Refresh data to show new role
+        fetchUsers();
       } else {
         setActionError(`Failed to update role. Status: ${res.status}`);
       }
@@ -137,6 +135,32 @@ export function UserTable() {
     }
   };
 
+  const handleRoleDowngrade = async (userEmail, newRole) => {
+    setActionError(null);
+    try {
+      const res = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/downgrade-role`, // <-- USE THE CORRECT ENDPOINT
+        {
+          method: "PUT", // Based on your image
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userEmail,
+          }),
+        }
+      );
+      if (res.ok) {
+        alert(`Role updated to ${newRole} successfully!`);
+        fetchUsers(); // Refresh data
+      } else {
+        setActionError(`Failed to update role. Status: ${res.status}`);
+      }
+    } catch (err) {
+      console.error("Error updating role:", err);
+      setActionError("Network error during role update.");
+    }
+  };
   // --- Dialog Control Functions ---
 
   const openDeleteDialog = (user) => {
@@ -156,8 +180,11 @@ export function UserTable() {
 
     if (dialogAction.type === "delete") {
       handleDelete(selectedUser.username);
-    } else if (dialogAction.type === "role" && dialogAction.newRole) {
+    }
+    if (dialogAction.newRole === "admin") {
       handleRoleUpdate(selectedUser.username, dialogAction.newRole);
+    } else if (dialogAction.newRole === "user") {
+      handleRoleDowngrade(selectedUser.username, dialogAction.newRole);
     }
     setIsDialogOpen(false);
   };
@@ -278,29 +305,45 @@ export function UserTable() {
                 <td className="p-3 capitalize">{user.role}</td>
                 <td className="p-3">
                   <div className="flex flex-col md:flex-row gap-3 items-center">
-                    {/* Role Change Buttons */}
-                    {user.role === "admin" ? (
-                      <Button
-                        onClick={() => openRoleUpdateDialog(user, "user")}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                      >
-                        Downgrade to User
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => openRoleUpdateDialog(user, "admin")}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Upgrade to Admin
-                      </Button>
-                    )}
+                    {/* Show "Downgrade" ONLY if YOU are SUPER_ADMIN and THEY are admin */}
+                    {currentUserRole === "SUPER_ADMIN" &&
+                      user.role === "ADMIN" && (
+                        <Button
+                          onClick={() => openRoleUpdateDialog(user, "user")}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          Downgrade to User
+                        </Button>
+                      )}
 
-                    <Button
-                      onClick={() => openDeleteDialog(user)}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      Delete
-                    </Button>
+                    {/* Show "Upgrade" if YOU are ADMIN/SUPER_ADMIN and THEY are USER */}
+                    {(currentUserRole === "SUPER_ADMIN" ||
+                      currentUserRole === "ADMIN") &&
+                      user.role === "USER" && (
+                        <Button
+                          onClick={() => openRoleUpdateDialog(user, "admin")}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Upgrade to Admin
+                        </Button>
+                      )}
+
+                    {/* Show "Delete" if... */}
+                    {
+                      // A) YOU are SUPER_ADMIN (and they aren't)
+                      ((currentUserRole === "SUPER_ADMIN" &&
+                        user.role !== "SUPER_ADMIN") ||
+                        // B) YOU are ADMIN and THEY are USER
+                        (currentUserRole === "ADMIN" &&
+                          user.role === "USER")) && (
+                        <Button
+                          onClick={() => openDeleteDialog(user)}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Delete
+                        </Button>
+                      )
+                    }
                   </div>
                 </td>
               </tr>

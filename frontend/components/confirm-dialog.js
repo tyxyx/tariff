@@ -18,7 +18,6 @@ export function ConfirmDialog({
         style={{ backgroundColor: colors.card, color: colors.text }}
       >
         <h2 className="text-lg font-bold mb-4">{title}</h2>
-        {/* Using dangerouslySetInnerHTML to allow **bold** markdown in the message for better role emphasis */}
         <p
           className="text-sm text-muted-foreground mb-6"
           dangerouslySetInnerHTML={{
@@ -35,10 +34,8 @@ export function ConfirmDialog({
           </Button>
           <Button
             onClick={onConfirm}
-            // Use the dynamic confirmColor class
             className={`${confirmColor} hover:${confirmColor.replace("600", "700")} text-white`}
           >
-            {/* Use the dynamic confirmText */}
             {confirmText}
           </Button>
         </div>
