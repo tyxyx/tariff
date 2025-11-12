@@ -1,28 +1,11 @@
-// utils/apiClient.js
-import Cookies from "js-cookie";
-
-// /*Old cookie using get()*/
-// export async function apiFetch(url, options = {}) {
-//   const token = Cookies.get("auth_token");
-
-//   const headers = {
-//     "Content-Type": "application/json",
-//     ...(options.headers || {}),
-//     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-
-//   };
-
-//   const response = await fetch(url, { ...options, headers });
-//   return response;
-// }
-
+// import Cookies from "js-cookie";
 
 export async function apiFetch(url, options = {}) {
-  const token = Cookies.get("auth_token");
+  // const token = Cookies.get("auth_token");
   const combinedHeaders = {
     "Content-Type": "application/json",
     ...options.headers,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}), 
+    // ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const response = await fetch(url, {

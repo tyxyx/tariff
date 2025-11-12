@@ -1,14 +1,10 @@
 package com.tariff.backend.controller;
 
+import com.tariff.backend.service.PredictionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.tariff.backend.service.PredictionService;
 
 @RestController
 @RequestMapping("/api/predict")
@@ -20,9 +16,16 @@ public class PredictionController {
         this.predictionService = predictionService;
     }
 
-    @PostMapping("/upload")
-    public ResponseEntity<String> uploadPdf(@RequestParam("file") MultipartFile file) {
-        String result = predictionService.sendPdfToGemini(file);
+    @PostMapping
+    public ResponseEntity<String> predictFromPdf(@RequestParam("file") MultipartFile file,
+                                                 @RequestParam(value = "country", required = false) String country) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body("No file uploaded.");
+        }
+        if (!file.getContentType().equalsIgnoreCase("application/pdf")) {
+            return ResponseEntity.badRequest().body("Only PDF files are accepted.");
+        }
+        String result = predictionService.sendPdfToGemini(file, country);
         return ResponseEntity.ok(result);
     }
 }

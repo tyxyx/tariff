@@ -28,7 +28,7 @@ export function LoginForm({ className = "" }) {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/login`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/login`,
         {
           method: "POST",
           headers: {
@@ -47,16 +47,15 @@ export function LoginForm({ className = "" }) {
       }
 
       setSuccess(data.message || "Login successful!");
-      localStorage.setItem("userEmail", email);
 
-      if (data.token) {
-        Cookies.set("auth_token", data.token, {
-          expires: 3,
-          secure: false, // todo : !!!! Enable if deployed on https
-          // httpOnly: true,
-          sameSite: "Strict",
-        });
-      }
+      // if (data.token) {
+      //   Cookies.set("auth_token", data.token, {
+      //     expires: 3,
+      //     secure: false, // Enable if deployed on https
+      //     // httpOnly: true,
+      //     sameSite: "Strict",
+      //   });
+      // }
 
       router.push("/dashboard");
     } catch (err) {

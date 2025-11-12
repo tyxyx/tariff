@@ -2,18 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/confirm-dialog"; // Reusable Dialog
 import { colors } from "@/styles/colors";
 import { apiFetch } from "@/utils/apiClient";
 
 export function UserTable() {
   const [users, setUsers] = useState([]);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
 
   //  To track the intended action (delete or role change) and the new role
   const [dialogAction, setDialogAction] = useState({
@@ -27,7 +28,7 @@ export function UserTable() {
     try {
       setLoading(true);
       const res = await apiFetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/`
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/`
       );
       if (!res.ok) {
         throw new Error(`Failed to fetch users. Status: ${res.status}`);
@@ -43,8 +44,46 @@ export function UserTable() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    const fetchInitialData = async () => {
+      setFetchError(null);
+      setLoading(true);
+      try {
+        // Fetch current user and all users at the same time
+        const [meRes, usersRes] = await Promise.all([
+          apiFetch(
+            `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+          ),
+          apiFetch(
+            `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/`
+          ),
+        ]);
+
+        if (!meRes.ok) {
+          throw new Error(
+            `Failed to fetch current user. Status: ${meRes.status}`
+          );
+        }
+        const meData = await meRes.json();
+        setCurrentUserEmail(meData.username);
+        setCurrentUserRole(meData.role);
+
+        if (!usersRes.ok) {
+          throw new Error(
+            `Failed to fetch user list. Status: ${usersRes.status}`
+          );
+        }
+        const usersData = await usersRes.json();
+        setUsers(usersData);
+      } catch (err) {
+        console.error("Error fetching initial data:", err);
+        setFetchError(err.message || "Network error during initial fetch.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
 
   // --- API Functions ---
 
@@ -52,7 +91,7 @@ export function UserTable() {
     setActionError(null);
     try {
       const res = await apiFetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/`,
         {
           method: "DELETE",
           headers: {
@@ -77,7 +116,7 @@ export function UserTable() {
     setActionError(null);
     try {
       const res = await apiFetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/upgrade-role`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/upgrade-role`,
         {
           method: "PUT",
           headers: {
@@ -90,7 +129,7 @@ export function UserTable() {
       );
       if (res.ok) {
         alert(`Role updated to ${newRole} successfully!`);
-        fetchUsers(); // Refresh data to show new role
+        fetchUsers();
       } else {
         setActionError(`Failed to update role. Status: ${res.status}`);
       }
@@ -100,6 +139,32 @@ export function UserTable() {
     }
   };
 
+  const handleRoleDowngrade = async (userEmail, newRole) => {
+    setActionError(null);
+    try {
+      const res = await apiFetch(
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/downgrade-role`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userEmail,
+          }),
+        }
+      );
+      if (res.ok) {
+        alert(`Role updated to ${newRole} successfully!`);
+        fetchUsers(); // Refresh data
+      } else {
+        setActionError(`Failed to update role. Status: ${res.status}`);
+      }
+    } catch (err) {
+      console.error("Error updating role:", err);
+      setActionError("Network error during role update.");
+    }
+  };
   // --- Dialog Control Functions ---
 
   const openDeleteDialog = (user) => {
@@ -119,8 +184,11 @@ export function UserTable() {
 
     if (dialogAction.type === "delete") {
       handleDelete(selectedUser.username);
-    } else if (dialogAction.type === "role" && dialogAction.newRole) {
+    }
+    if (dialogAction.newRole === "admin") {
       handleRoleUpdate(selectedUser.username, dialogAction.newRole);
+    } else if (dialogAction.newRole === "user") {
+      handleRoleDowngrade(selectedUser.username, dialogAction.newRole);
     }
     setIsDialogOpen(false);
   };
@@ -128,23 +196,6 @@ export function UserTable() {
   // --- Render Logic ---
 
   const currentError = fetchError || actionError;
-
-  // if (currentError) {
-  //   return (
-  //     <div className="p-4 rounded-md text-red-700 bg-red-100 border border-red-400">
-  //       <h2 className="font-bold text-lg">⚠️ Error</h2>
-  //       <p>**{currentError}**</p>
-  //       <Button
-  //         onClick={fetchUsers}
-  //         className="mt-3 bg-red-600 hover:bg-red-700 text-white"
-  //       >
-  //         Try Again
-  //       </Button>
-  //     </div>
-  //   );
-  // }
-
-  // Parse status code and message
   let statusCode;
   let errorMessage = "An unexpected error occurred.";
 
@@ -250,39 +301,57 @@ export function UserTable() {
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.username} className="border-b">
-              <td className="p-3">{user.username}</td>
-              <td className="p-3 capitalize">{user.role}</td>
-              <td className="p-3">
-                <div className="flex flex-col md:flex-row gap-3 items-center">
-                  {/* Role Change Buttons */}
-                  {user.role === "admin" ? (
-                    <Button
-                      onClick={() => openRoleUpdateDialog(user, "user")}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                    >
-                      Downgrade to User
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => openRoleUpdateDialog(user, "admin")}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Upgrade to Admin
-                    </Button>
-                  )}
+          {users
+            .filter((user) => user.username !== currentUserEmail)
+            .map((user) => (
+              <tr key={user.username} className="border-b">
+                <td className="p-3">{user.username}</td>
+                <td className="p-3 capitalize">{user.role}</td>
+                <td className="p-3">
+                  <div className="flex flex-col md:flex-row gap-3 items-center">
+                    {/* Show "Downgrade" ONLY if YOU are SUPER_ADMIN and THEY are admin */}
+                    {currentUserRole === "SUPER_ADMIN" &&
+                      user.role === "ADMIN" && (
+                        <Button
+                          onClick={() => openRoleUpdateDialog(user, "user")}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          Downgrade to User
+                        </Button>
+                      )}
 
-                  <Button
-                    onClick={() => openDeleteDialog(user)}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                    {/* Show "Upgrade" if YOU are ADMIN/SUPER_ADMIN and THEY are USER */}
+                    {(currentUserRole === "SUPER_ADMIN" ||
+                      currentUserRole === "ADMIN") &&
+                      user.role === "USER" && (
+                        <Button
+                          onClick={() => openRoleUpdateDialog(user, "admin")}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Upgrade to Admin
+                        </Button>
+                      )}
+
+                    {/* Show "Delete" if... */}
+                    {
+                      // A) YOU are SUPER_ADMIN (and they aren't)
+                      ((currentUserRole === "SUPER_ADMIN" &&
+                        user.role !== "SUPER_ADMIN") ||
+                        // B) YOU are ADMIN and THEY are USER
+                        (currentUserRole === "ADMIN" &&
+                          user.role === "USER")) && (
+                        <Button
+                          onClick={() => openDeleteDialog(user)}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Delete
+                        </Button>
+                      )
+                    }
+                  </div>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
 

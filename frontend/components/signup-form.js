@@ -6,10 +6,8 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { LoginInput } from "@/components/login-form";
 
-export function SignupForm() {
-  const router = useRouter(); // ✅ Hook at the top level
-
-  // ✅ State hooks at the top level
+export function SignupForm({ isAdmin = false, onSuccess }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,7 +33,7 @@ export function SignupForm() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/register`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/register`,
         {
           method: "POST",
           headers: {
@@ -52,16 +50,47 @@ export function SignupForm() {
         return;
       }
 
-      if (data.token) {
-        Cookies.set("auth_token", data.token, {
+      setSuccess("Account created successfully!");
+
+      if (isAdmin) {
+        if (onSuccess) onSuccess();
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Show success
+        setIsLoading(false); // Re-enable form
+        return;
+      }
+
+      // This creates a 2-second (2000ms) delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const login_response = await fetch(
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+          credentials: "include",
+        }
+      );
+
+      const login_data = await login_response.json();
+
+      if (!login_response.ok) {
+        setError(login_data.message || "Login failed");
+        return;
+      }
+
+      if (login_data.token) {
+        Cookies.set("auth_token", login_data.token, {
           expires: 7,
           secure: true,
           sameSite: "Strict",
         });
       }
 
-      setSuccess("Account created successfully!");
-      localStorage.setItem("userEmail", email);
+      setSuccess(login_data.message || "Login successful!");
+
       router.push("/dashboard");
     } catch (err) {
       console.error("Signup error:", err);

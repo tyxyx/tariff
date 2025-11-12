@@ -19,8 +19,6 @@ export const useApiData = (url, dependencies = []) => {
       const res = await apiFetch(url);
 
       if (!res.ok) {
-        // Handle non-200 HTTP status codes
-        // We throw an Error object here so it's caught by the catch block
         const errorMessage = `Failed to fetch data. Status: ${res.status}`;
         throw new Error(errorMessage);
       }
@@ -28,9 +26,8 @@ export const useApiData = (url, dependencies = []) => {
       const json = await res.json();
       setData(json);
     } catch (err) {
-      // Handle network errors or the error thrown above
       console.error("Error fetching data:", err);
-      // Use the thrown message or a default network error message
+      // jic my user backend endpoint fuck up
       setError(err.message || "Network error or server unreachable.");
       setData(null);
     } finally {
