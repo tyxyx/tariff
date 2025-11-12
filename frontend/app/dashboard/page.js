@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/utils/apiClient";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,21 +15,25 @@ import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monito
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
-  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [currentUserRole, setCurrentUserRole] = useState("");
 
   useEffect(() => {
     let mounted = true;
     const fetchMe = async () => {
       try {
-        const meRes = await fetch('/api/users/me');
-        if (!meRes.ok) return;
+        const meRes = await apiFetch(
+          `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+        );
+        if (!meRes.ok) {
+          console.error("Failed to fetch current user. Status:", meRes.status);
+          return;
+        }
         const meData = await meRes.json();
         if (!mounted) return;
-        setCurrentUserEmail(meData.username);
-        setCurrentUserRole(meData.role);
+            setCurrentUserRole(meData.role);
+
       } catch (e) {
-        // optionally handle error
+        console.error("Error fetching current user:", e);
       }
     };
     fetchMe();
@@ -117,7 +122,7 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
-          {currentUserRole === 'admin' && (
+          {currentUserRole === 'ADMIN' && (
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <Server className="h-12 w-12 text-primary mb-4" />
