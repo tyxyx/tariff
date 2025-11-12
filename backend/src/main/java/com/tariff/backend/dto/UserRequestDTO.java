@@ -20,22 +20,19 @@ public class UserRequestDTO {
     ) {}
 
     public record UpdatePasswordDto(
-            @NotBlank(message = "Email is required.") @Email(
-                    message = "Please provide a valid email address."
-            ) String email,
             @NotBlank(message = "Current password is required.") String password,
             @NotBlank(message = "New password is required.")
             String newPassword
     ) {}
 
-    public record UpdateEmailDto(
-         @NotBlank(message = "Email is required.") @Email(
-                    message = "Please provide a valid email address."
-            ) String email,
-        @NotBlank(message = "New email is required.") 
-        @Email(message = "Please provide a valid email address.") 
-        String newEmail
-    ) {}
+//    public record UpdateEmailDto(
+//         @NotBlank(message = "Email is required.") @Email(
+//                    message = "Please provide a valid email address."
+//            ) String email,
+//        @NotBlank(message = "New email is required.")
+//        @Email(message = "Please provide a valid email address.")
+//        String newEmail
+//    ) {}
 
     public record DeleteUserDto(
             @NotBlank(message = "Email is required.")

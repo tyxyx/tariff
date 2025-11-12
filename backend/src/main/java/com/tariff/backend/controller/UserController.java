@@ -9,7 +9,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -58,10 +60,10 @@ public class UserController {
   }
 
   @PutMapping("/change-password")
-  public User updatePassword(
-    @Valid @RequestBody UserRequestDTO.UpdatePasswordDto updatePasswordDto
-  ) {
-    return userService.updatePassword(updatePasswordDto);
+  public User updatePassword(@AuthenticationPrincipal UserDetails loggedInUser,
+                             @Valid @RequestBody UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
+      String authenticatedEmail = loggedInUser.getUsername();
+      return userService.updatePassword(authenticatedEmail, updatePasswordDto);
   }
 
   // @PutMapping("/change-email")

@@ -25,6 +25,9 @@ public class UserService {
   @Value("${security.password.min-length:8}") // Default to 8 if property is missing
   private int minPwdLength;
 
+    @Value("${security.password.max-length:16}") // Default to 16 if property is missing
+    private int maxPwdLength;
+
   public UserService(
     UserRepository userRepository,
     BCryptPasswordEncoder passwordEncoder,
@@ -66,11 +69,15 @@ public class UserService {
   private void checkPasswordStrength(String password) {
     if (
       !(password.length() >= minPwdLength &&
+        password.length() <= maxPwdLength &&
         password.matches(".*[A-Z].*") &&
         password.matches(".*\\d.*"))
     ) {
       throw new IllegalArgumentException(
-        String.format("Password must be at least %d characters long, contain an uppercase letter and a number.", minPwdLength)
+              String.format(
+                      "Password must be between %d and %d characters long, contain at least one uppercase letter, and include at least one number.",
+                      minPwdLength, maxPwdLength
+              )
       );
     }
   }
@@ -114,8 +121,8 @@ public class UserService {
   // todo fix weird bug
   // if jwt token is incorrect (like idk someone stole another user jwt and tried to login as a admin),
   // it will return 200 without updating the password in db, idkkkkkkkk
-  public User updatePassword(UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
-    User user = findUserByEmailOrThrow(updatePasswordDto.email());
+  public User updatePassword(String authenticatedEmail, UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
+    User user = findUserByEmailOrThrow(authenticatedEmail);
 
     checkPasswordMatch(updatePasswordDto.password(), user.getPassword());
     checkPasswordStrength(updatePasswordDto.newPassword());

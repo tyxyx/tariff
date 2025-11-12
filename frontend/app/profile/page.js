@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { colors } from "@/styles/colors";
 import React, { useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
-import Cookies from "js-cookie";
+import { apiFetch } from "@/utils/apiClient";
 
 export default function DashboardPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -14,12 +14,12 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Password validation function
-  const isPasswordValid = (password) => {
-    return (
-      password.length >= 8 && /[A-Z]/.test(password) && /\d/.test(password)
-    );
-  };
+  // // Password validation function, handled in backend
+  // const isPasswordValid = (password) => {
+  //   return (
+  //     password.length >= 8 && /[A-Z]/.test(password) && /\d/.test(password)
+  //   );
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,35 +30,39 @@ export default function DashboardPage() {
       setError("New password and confirmation do not match.");
       return;
     }
-    if (!isPasswordValid(newPassword)) {
-      setError(
-        "New password must be at least 8 characters, contain an uppercase letter and a number."
-      );
-      return;
-    }
 
-    // Get the token from the cookie
-    const token = Cookies.get("authToken");
-    if (!token) {
-      setError("Authentication token not found.");
+    if (currentPassword === newPassword) {
+      setError("The new password cannot be the same as the current password. Please choose a different password.");
       return;
     }
+    // if (!isPasswordValid(newPassword)) {
+    //   setError(
+    //     "New password must be at least 8 characters, contain an uppercase letter and a number."
+    //   );
+    //   return;
+    // }
 
-    // extracct email from jwt headers instead of localStorage
-    try {
-      const decoded = jwtDecode(token);
-      const email = decoded.email || decoded.sub;
-      if (!email) {
-        setError("Email not found in the token payload.");
-        return;
-      }
-    } catch (error) {
-      //todo fix ur user backend see why 403 error not appearing,
-      // replace with backend error
-      console.error("JWT Decode Error:", error);
-      setError("Invalid authentication token.");
-      return;
-    }
+    // // Get the token from the cookie
+    // const token = Cookies.get("authToken");
+    // if (!token) {
+    //   setError("Authentication token not found.");
+    //   return;
+    // }
+
+    // // extracct email from jwt headers instead of localStorage
+    // try {
+    //   const decoded = jwtDecode(token);
+    //   const email = decoded.email || decoded.sub;
+    //   if (!email) {
+    //     setError("Email not found in the token payload.");
+    //     return;
+    //   }
+    // } catch (error) {
+    //   // replace with backend error
+    //   console.error("JWT Decode Error:", error);
+    //   setError("Invalid authentication token.");
+    //   return;
+    // }
 
     // // Changed to extract from jwt headers
     // const email = localStorage.getItem("userEmail");
@@ -67,17 +71,12 @@ export default function DashboardPage() {
     //   return;
     // }
 
-    try {
-      const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/change-password`,
+try {
+      const response = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/change-password`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // pass jwt shit
-          },
           body: JSON.stringify({
-            email,
             password: currentPassword,
             newPassword: newPassword,
           }),
@@ -95,6 +94,7 @@ export default function DashboardPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      
     } catch (err) {
       setError("An error occurred. Please try again.");
     }
@@ -161,10 +161,9 @@ export default function DashboardPage() {
                 <Button
                   type="submit"
                   disabled={
-                    !currentPassword ||
-                    !newPassword ||
-                    !confirmPassword ||
-                    !isPasswordValid(newPassword) ||
+                    !currentPassword || 
+                    !newPassword || 
+                    !confirmPassword|| 
                     newPassword !== confirmPassword
                   }
                 >

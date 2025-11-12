@@ -17,9 +17,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
   // Retrieve user using UserRepository for Spring Security
   @Override
-  public UserDetails loadUserByUsername(String username) {
+  public UserDetails loadUserByUsername(String email) {
     return userRepository
-      .findByEmail(username)
+      .findByEmail(email)
       .orElseThrow(() ->
         new UsernameNotFoundException(
           "We couldn't find an account with that email. Please check your details."

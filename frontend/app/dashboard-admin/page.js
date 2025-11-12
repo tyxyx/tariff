@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { UserTable  } from "@/components/user-table";
 import { colors } from "@/styles/colors";
-import PageHeader from "@/components/ui/header";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function UserDashboard() {
   return (

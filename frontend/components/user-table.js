@@ -11,12 +11,11 @@ export function UserTable() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEmail, setEditingEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [fetchError, setFetchError] = useState(null);
 
-  // 1. NEW STATE: To track the intended action (delete or role change) and the new role
+  //  To track the intended action (delete or role change) and the new role
   const [dialogAction, setDialogAction] = useState({
     type: "delete",
     newRole: null,
@@ -145,89 +144,98 @@ export function UserTable() {
   //   );
   // }
 
-// Parse status code and message
-let statusCode;
-let errorMessage = "An unexpected error occurred.";
+  // Parse status code and message
+  let statusCode;
+  let errorMessage = "An unexpected error occurred.";
 
-if (currentError) {
-  if (typeof currentError === "object") {
-    statusCode = currentError.status;
-    errorMessage = currentError.message || errorMessage;
-  } else if (typeof currentError === "string") {
-    if (currentError === "Failed to fetch") {
-      statusCode = "FETCH";
-      errorMessage = "Cannot connect to the server. Please check your network or try again later.";
-    } else {
-      const match = currentError.match(/(\d{3})/);
-      statusCode = match ? match[1] : null;
-      errorMessage = currentError;
+  if (currentError) {
+    if (typeof currentError === "object") {
+      statusCode = currentError.status;
+      errorMessage = currentError.message || errorMessage;
+    } else if (typeof currentError === "string") {
+      if (currentError === "Failed to fetch") {
+        statusCode = "FETCH";
+        errorMessage =
+          "Cannot connect to the server. Please check your network or try again later.";
+      } else {
+        const match = currentError.match(/(\d{3})/);
+        statusCode = match ? match[1] : null;
+        errorMessage = currentError;
+      }
     }
   }
-}
 
-if (currentError) {
-  // Fail page block variant for fetch/network/403 errors
-  const is403 = statusCode === "403" || errorMessage.includes("403");
-  const isFetch = statusCode === "FETCH" || errorMessage === "Failed to fetch";
-  return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center"
-      style={{
-        background: "#171924",
-        color: "#ff5151",
-      }}
-    >
+  if (currentError) {
+    // Fail page block variant for fetch/network/403 errors
+    const is403 = statusCode === "403" || errorMessage.includes("403");
+    const isFetch =
+      statusCode === "FETCH" || errorMessage === "Failed to fetch";
+    return (
       <div
-        className="p-8 rounded-lg border shadow-lg"
+        className="min-h-screen flex flex-col items-center justify-center"
         style={{
-          background: "#1b1e2b",
-          borderColor: "#512f3d",
+          background: "#171924",
           color: "#ff5151",
-          boxShadow: "0 2px 10px rgba(80,47,61, 0.1)"
         }}
       >
-        <div className="flex items-center mb-4">
-          <span
+        <div
+          className="p-8 rounded-lg border shadow-lg"
+          style={{
+            background: "#1b1e2b",
+            borderColor: "#512f3d",
+            color: "#ff5151",
+            boxShadow: "0 2px 10px rgba(80,47,61, 0.1)",
+          }}
+        >
+          <div className="flex items-center mb-4">
+            <span
+              style={{
+                display: "inline-block",
+                width: "2rem",
+                height: "2rem",
+                background: "#512f3d",
+                color: "#fff",
+                borderRadius: "999px",
+                textAlign: "center",
+                fontWeight: "bold",
+                fontSize: "1.3rem",
+                marginRight: "1rem",
+              }}
+            >
+              {is403 ? "🔒" : isFetch ? "🌐" : "⚠️"}
+            </span>
+            <h1
+              className="font-bold text-2xl"
+              style={{ color: "#fff", margin: 0 }}
+            >
+              {is403 ? "Access Denied" : isFetch ? "Network Error" : "Error"}
+            </h1>
+          </div>
+          <div
             style={{
-              display: "inline-block",
-              width: "2rem",
-              height: "2rem",
-              background: "#512f3d",
-              color: "#fff",
-              borderRadius: "999px",
-              textAlign: "center",
+              color: "#ff5151",
               fontWeight: "bold",
-              fontSize: "1.3rem",
-              marginRight: "1rem"
+              marginBottom: "1.2rem",
+              fontSize: "1.1rem",
             }}
           >
-            {is403 ? "🔒" : isFetch ? "🌐" : "⚠️"}
-          </span>
-          <h1 className="font-bold text-2xl" style={{ color: "#fff", margin: 0 }}>
             {is403
-              ? "Access Denied"
+              ? "You do not have permission to access this page. Please contact your administrator if you need access."
+              : errorMessage}
+          </div>
+          <div style={{ color: "#fff", opacity: 0.7 }}>
+            {is403
+              ? "(Error 403: Forbidden)"
               : isFetch
-                ? "Network Error"
-                : "Error"}
-          </h1>
-        </div>
-        <div style={{ color: "#ff5151", fontWeight: "bold", marginBottom: "1.2rem", fontSize: "1.1rem" }}>
-          {is403
-            ? "You do not have permission to access this page. Please contact your administrator if you need access."
-            : errorMessage}
-        </div>
-        <div style={{ color: "#fff", opacity: 0.7 }}>
-          {is403
-            ? "(Error 403: Forbidden)"
-            : isFetch
-              ? "(Could not reach backend server)"
-              : statusCode ? `(Error ${statusCode})` : null
-          }
+                ? "(Could not reach backend server)"
+                : statusCode
+                  ? `(Error ${statusCode})`
+                  : null}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (loading) return <p>Loading users...</p>;
 
