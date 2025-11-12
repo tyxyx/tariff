@@ -48,14 +48,14 @@ export function LoginForm({ className = "" }) {
 
       setSuccess(data.message || "Login successful!");
 
-      if (data.token) {
-        Cookies.set("auth_token", data.token, {
-          expires: 3,
-          secure: false, // Enable if deployed on https
-          // httpOnly: true,
-          sameSite: "Strict",
-        });
-      }
+      // if (data.token) {
+      //   Cookies.set("auth_token", data.token, {
+      //     expires: 3,
+      //     secure: false, // Enable if deployed on https
+      //     // httpOnly: true,
+      //     sameSite: "Strict",
+      //   });
+      // }
 
       router.push("/dashboard");
     } catch (err) {
