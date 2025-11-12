@@ -30,7 +30,7 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_key_pair" "key_pair" {
-  key_name   = "${var.name}-key"
+  key_name   = "${var.name}KeyPair"
   public_key = file(var.public_key_path) # Path to your public key file
 }
 
@@ -55,22 +55,6 @@ resource "aws_security_group" "scrapper_sg" {
   }
 }
 
-locals {
-  user_data = <<-EOF
-    #!/bin/bash
-    set -eux
-
-    # Update package index
-    sudo apt-get update -y
-
-    # Install Python, pip and venv
-    sudo apt-get install -y python3.12 python3.12-pip python3.12-venv
-
-    # create venv
-    python3 -m venv /home/ubuntu/.venv
-  EOF
-}
-
 resource "aws_instance" "scrapper" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
@@ -78,7 +62,6 @@ resource "aws_instance" "scrapper" {
   vpc_security_group_ids      = [aws_security_group.scrapper_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.key_pair.key_name
-  user_data                   = local.user_data
   tags                        = { Name = var.name }
 
   provisioner "file" {
@@ -116,19 +99,22 @@ resource "aws_instance" "scrapper" {
 
   # Run a script after files are copied
   provisioner "remote-exec" {
-    inline = [
-      "chmod +x /home/ubuntu/scrapper.py", # Make the script executable
-      "source /home/ubuntu/.venv/bin/activate", # Activate the virtual environment
-      "pip install --upgrade pip", # Upgrade pip
-      "pip install -r /home/ubuntu/requirements.txt", # Install dependencies
-    ]
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file(var.private_key_path)
-      host        = self.public_ip
-    }
+  inline = [
+    "sudo apt-get update -y",
+    "sudo apt-get install -y python3.12 python3.12-venv python3-pip",  # Use python3-pip instead
+    "chmod +x /home/ubuntu/scrapper.py",
+    "python3.12 -m venv /home/ubuntu/.venv",  # Create venv with python3.12
+    "chmod +x /home/ubuntu/.venv/bin/pip",
+    "/home/ubuntu/.venv/bin/pip install --upgrade pip",
+    "/home/ubuntu/.venv/bin/pip install -r /home/ubuntu/requirements.txt"
+  ]
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    host        = self.public_ip
   }
+}
 }
 
 resource "aws_eip" "scrapper_eip" {}
