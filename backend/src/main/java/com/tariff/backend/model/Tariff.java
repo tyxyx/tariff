@@ -16,10 +16,15 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Entity
 @Table(name = "tariff")
 @Data
+// Exclude collections from equals/hashCode to avoid circular references with Product and User
+@EqualsAndHashCode(exclude = {"products", "users"})
+@ToString(exclude = {"products", "users"})
 public class Tariff {
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)

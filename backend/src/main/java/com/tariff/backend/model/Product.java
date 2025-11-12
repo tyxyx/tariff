@@ -2,17 +2,21 @@ package com.tariff.backend.model;
 
 import java.util.HashSet;
 import java.util.Set;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import jakarta.persistence.Table;
 import lombok.Data;
 
 @Entity
 @Table(name = "product")
 @Data
+@EqualsAndHashCode(exclude = {"tariffs"})
+@ToString(exclude = {"tariffs"})
 public class Product {
   @Id
   private String HTS_code;
@@ -21,6 +25,6 @@ public class Product {
   private boolean enabled = true;
 
   @ManyToMany(mappedBy = "products")
-  @JsonIgnore
+  @JsonIgnore // prevent serializing back-reference to tariffs to avoid cycles
   private Set<Tariff> tariffs = new HashSet<>();
 }
