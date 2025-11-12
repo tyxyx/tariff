@@ -21,8 +21,8 @@ export default function PageHeader() {
   useEffect(() => {
     if (loading) return;
     if (error || !user) {
-      Cookies.remove("auth_token");
-      localStorage.removeItem("userEmail");
+      // Cookies.remove("auth_token");
+      // localStorage.removeItem("userEmail");
       router.push("/login");
     }
     // const email = localStorage.getItem("userEmail");
@@ -31,10 +31,26 @@ export default function PageHeader() {
     // }
   }, [loading, error, user, router]);
 
-  const handleLogout = () => {
-    // localStorage.removeItem("userEmail");
-    Cookies.remove("auth_token"); // <-- This is the crucial addition
-    router.push("/login");
+  // const handleLogout = () => {
+  //   // localStorage.removeItem("userEmail");
+  //   Cookies.remove("auth_token"); // <-- This is the crucial addition
+  //   router.push("/login");
+  // };
+  const handleLogout = async () => {
+    try {
+      await fetch(
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/logout`,
+        {
+          method: "POST",
+          credentials: "include", // Send cookie to backend
+        }
+      );
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      // Redirect to login regardless of success/failure
+      router.push("/login");
+    }
   };
 
   if (loading || !user) {

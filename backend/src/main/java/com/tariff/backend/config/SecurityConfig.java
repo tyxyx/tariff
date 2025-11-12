@@ -61,6 +61,7 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
           .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll() // Assuming this is for registration
           .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll() // Assuming you have a login endpoint
+          .requestMatchers(HttpMethod.POST, "/api/users/logout").permitAll() // Ensure user can logout
           .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
           .requestMatchers(HttpMethod.GET, "/health").permitAll() // for healthchecks
 
@@ -99,10 +100,11 @@ public class SecurityConfig {
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Replace with your frontend URL
     configuration.setAllowedMethods(
-      // List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
-      List.of("GET", "POST", "PUT","DELETE")
+      List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+      // List.of("GET", "POST", "PUT","DELETE")
     );
-    configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+    // configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+    configuration.setAllowedHeaders(List.of("*"));
     configuration.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source =

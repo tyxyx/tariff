@@ -3,6 +3,7 @@ package com.tariff.backend.component;
 import com.tariff.backend.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -43,18 +44,40 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     HttpServletResponse response,
     FilterChain filterChain
   ) throws ServletException, IOException {
-    final String authHeader = request.getHeader("Authorization");
+    // Read token from cookie instead of Authorization header
+    String jwt = null;
+    if (request.getCookies() != null) {
+      for (Cookie cookie : request.getCookies()) {
+        if ("auth_token".equals(cookie.getName())) {
+          jwt = cookie.getValue();  // Direct token value, no "Bearer " prefix
+          break;
+        }
+      }
+    }
 
-    // retrieve JWT token in "authorization" header
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    // Check if token exists (no "Bearer " check needed for cookies)
+    if (jwt == null) {
       filterChain.doFilter(request, response);
       return;
     }
 
     try {
-      // extract header, email
-      final String jwt = authHeader.substring(7);
+      // Extract email directly from jwt (no substring needed)
       final String userEmail = jwtService.extractUsername(jwt);
+
+
+    // final String authHeader = request.getHeader("Authorization");
+
+    // // retrieve JWT token in "authorization" header
+    // if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    //   filterChain.doFilter(request, response);
+    //   return;
+    // }
+
+    // try {
+    //   // extract header, email
+    //   final String jwt = authHeader.substring(7);
+    //   final String userEmail = jwtService.extractUsername(jwt);
 
       // check is user have been authenticated before
       Authentication authentication = SecurityContextHolder.getContext()

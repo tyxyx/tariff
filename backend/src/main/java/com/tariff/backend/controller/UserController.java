@@ -7,6 +7,9 @@ import com.tariff.backend.service.JwtService;
 import com.tariff.backend.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -48,11 +51,22 @@ public class UserController {
 
   @PostMapping("/login")
   public ResponseEntity<UserLoginDTO> loginUser(
-    @Valid @RequestBody UserRequestDTO.LoginDto loginDto
+    @Valid @RequestBody UserRequestDTO.LoginDto loginDto,
+    HttpServletResponse response 
   ) {
     // Note that it takes in the record to auth user and returns seperate mutable DTO
     User authenticatedUser = userService.loginUser(loginDto);
     String jwtToken = jwtService.generateToken(authenticatedUser);
+
+    // ✅ Set HttpOnly cookie
+    Cookie cookie = new Cookie("auth_token", jwtToken);
+    cookie.setHttpOnly(true);  // Prevents JavaScript access
+    cookie.setSecure(true);    // Only sent over HTTPS (set false for local dev)
+    cookie.setPath("/");       // Available for all paths
+    cookie.setMaxAge(3 * 24 * 60 * 60); // 3 days in seconds
+    cookie.setAttribute("SameSite", "Strict"); // CSRF protection
+    
+    response.addCookie(cookie);
 
     return ResponseEntity.ok(
       new UserLoginDTO(jwtToken, jwtService.getExpirationTime())
@@ -84,5 +98,19 @@ public class UserController {
     @PutMapping("/downgrade-role")
     public User downgradeRole(@Valid @RequestBody UserRequestDTO.UpdateUserRoleDto updateUserRoleDto) {
         return userService.downgradeRole(updateUserRoleDto);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletResponse response) {
+      // Delete the cookie by setting maxAge to 0
+      Cookie cookie = new Cookie("auth_token", null);
+      cookie.setHttpOnly(true);
+      cookie.setSecure(false);
+      cookie.setPath("/");
+      cookie.setMaxAge(0);  // Expire immediately
+      
+      response.addCookie(cookie);
+      
+      return ResponseEntity.ok("Logged out successfully");
     }
 }
