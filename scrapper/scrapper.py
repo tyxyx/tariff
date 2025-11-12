@@ -230,6 +230,7 @@ def clean_tariff(records: List[dict]) -> List[dict]:
 # Async fetch helpers
 async def fetch_bytes_with_retries(session: aiohttp.ClientSession, url: str, semaphore: asyncio.Semaphore) -> bytes | None:
     backoff = RETRY_BASE
+    txt = url.split(".")
     for attempt in range(1, MAX_RETRIES + 1):
         async with semaphore:
             try:
@@ -239,10 +240,12 @@ async def fetch_bytes_with_retries(session: aiohttp.ClientSession, url: str, sem
                     elif resp.status in (429, 503):
                         # transient: retry
                         pass
-                    else:
-                        txt = await resp.text()
-                        print(f"Non-retryable status {resp.status} for {url}: {txt[:200]}")
+                    elif resp.status == 404:
+                        print(f"Not found for dest: {txt[3]}, ori: {txt[4]}")
                         return None
+                    else:
+                        return None
+                    
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                 # treat as transient
                 pass
@@ -250,7 +253,7 @@ async def fetch_bytes_with_retries(session: aiohttp.ClientSession, url: str, sem
         jitter = random.random() * 0.1 * backoff
         await asyncio.sleep(backoff + jitter)
         backoff *= 2
-    print(f"Max retries exceeded for {url}")
+    print(f"Max retries exceeded for dest: {txt[3]}, ori: {txt[4]}")
     return None
 
 async def fetch_country_codes_async(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore) -> Dict[str, str]:
