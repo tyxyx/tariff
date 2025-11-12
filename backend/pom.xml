@@ -159,6 +159,17 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
+				<configuration>
+					<excludes>
+						<!-- Exclude data classes and DTOs -->
+						<exclude>**/model/**</exclude>
+						<exclude>**/dto/**</exclude>
+						<!-- Exclude exception classes (just constructors) -->
+						<exclude>**/exception/*Exception.class</exclude>
+						<!-- Exclude main application class -->
+						<exclude>**/BackendApplication.class</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
