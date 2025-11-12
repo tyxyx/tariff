@@ -11,86 +11,113 @@ export default function HeatmapPage() {
         const [origins, setOrigins] = useState([]);
         const [selectedOrigin, setSelectedOrigin] = useState("");
         const [mode, setMode] = useState("export"); // 'export' = tariffs from origin -> dest, 'import' = tariffs where dest == origin
-		const [hideExpired, setHideExpired] = useState(false);
+        const [hideExpired, setHideExpired] = useState(false);
         
-		// --- caching helpers: try cookie first, fallback to localStorage ---
-		const clearTariffsCache = useCallback(() => {
-			document.cookie = 'tariffs_cache_v1=; path=/; max-age=0';
-			try { localStorage.removeItem('tariffs_cache_v1'); } catch (e) { }
-		}, []);
+        // --- caching helpers: try cookie first, fallback to localStorage ---
+        const clearTariffsCache = useCallback(() => {
+            document.cookie = 'tariffs_cache_v1=; path=/; max-age=0';
+            try { localStorage.removeItem('tariffs_cache_v1'); } catch (e) { }
+        }, []);
 
-		const getSavedTariffs = useCallback(() => {
-			try {
-				// cookie name: tariffs_cache_v1
-				const match = document.cookie.split('; ').find(r => r.startsWith('tariffs_cache_v1='));
-				if (match) {
-					const raw = match.split('=')[1] || '';
-					if (raw) {
-						try { return JSON.parse(decodeURIComponent(raw)); } catch (e) { console.warn('Failed parsing tariffs cookie, clearing cache', e); clearTariffsCache(); }
-					}
-				}
-				const ls = localStorage.getItem('tariffs_cache_v1');
-				if (ls) return JSON.parse(ls);
-			} catch (e) {
-				console.warn('getSavedTariffs error', e);
-			}
-			return null;
-		}, [clearTariffsCache]);
+        const getSavedTariffs = useCallback(() => {
+            try {
+                // cookie name: tariffs_cache_v1
+                const match = document.cookie.split('; ').find(r => r.startsWith('tariffs_cache_v1='));
+                if (match) {
+                    const raw = match.split('=')[1] || '';
+                    if (raw) {
+                        try { return JSON.parse(decodeURIComponent(raw)); } catch (e) { console.warn('Failed parsing tariffs cookie, clearing cache', e); clearTariffsCache(); }
+                    }
+                }
+                const ls = localStorage.getItem('tariffs_cache_v1');
+                if (ls) return JSON.parse(ls);
+            } catch (e) {
+                console.warn('getSavedTariffs error', e);
+            }
+            return null;
+        }, [clearTariffsCache]);
 
-		const saveTariffsToCookie = useCallback((obj) => {
-			try {
-				const s = JSON.stringify(obj || []);
-				const enc = encodeURIComponent(s);
-				// write cookie for 30 days
-				document.cookie = `tariffs_cache_v1=${enc}; path=/; max-age=${30 * 24 * 60 * 60}`;
-				// verify written value (cookie truncation possible)
-				const back = (document.cookie.split('; ').find(r => r.startsWith('tariffs_cache_v1=')) || '').split('=')[1] || '';
-				if (back && back === enc) return;
-				// fallback to localStorage when cookie cannot hold payload
-				localStorage.setItem('tariffs_cache_v1', s);
-				console.warn('tariffs saved to localStorage because cookie was too small');
-			} catch (e) {
-				console.warn('saveTariffsToCookie error, falling back to localStorage', e);
-				try { localStorage.setItem('tariffs_cache_v1', JSON.stringify(obj || [])); } catch (e2) { /* ignore */ }
-			}
-		}, []);
+        const saveTariffsToCookie = useCallback((obj) => {
+            try {
+                const s = JSON.stringify(obj || []);
+                const enc = encodeURIComponent(s);
+                // write cookie for 30 days
+                document.cookie = `tariffs_cache_v1=${enc}; path=/; max-age=${30 * 24 * 60 * 60}`;
+                // verify written value (cookie truncation possible)
+                const back = (document.cookie.split('; ').find(r => r.startsWith('tariffs_cache_v1=')) || '').split('=')[1] || '';
+                if (back && back === enc) return;
+                // fallback to localStorage when cookie cannot hold payload
+                localStorage.setItem('tariffs_cache_v1', s);
+                console.warn('tariffs saved to localStorage because cookie was too small');
+            } catch (e) {
+                console.warn('saveTariffsToCookie error, falling back to localStorage', e);
+                try { localStorage.setItem('tariffs_cache_v1', JSON.stringify(obj || [])); } catch (e2) { /* ignore */ }
+            }
+        }, []);
 
-	// allow calling helpers from effect without listing them as deps
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	useEffect(() => {
-			setLoading(true);
-			// try cache first
-			const cached = getSavedTariffs();
-			if (cached && Array.isArray(cached) && cached.length > 0) {
-				setTariffs(cached);
-				const originNames = Array.from(new Set(cached.map(t => t.originCountry?.name).filter(Boolean))).sort();
-				setOrigins(originNames);
-				if (originNames.length > 0) setSelectedOrigin(originNames[0]);
-				setLoading(false);
-				return;
-			}
+    // allow calling helpers from effect without listing them as deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+            setLoading(true);
+            // try cache first
+            const cached = getSavedTariffs();
+            if (cached && Array.isArray(cached) && cached.length > 0) {
+                setTariffs(cached);
+                const originNames = Array.from(new Set(cached.map(t => t.originCountry?.name).filter(Boolean))).sort();
+                setOrigins(originNames);
+                if (originNames.length > 0) setSelectedOrigin(originNames[0]);
+                setLoading(false);
+                return;
+            }
 
-			fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`)
-				.then((res) => {
+			// fetch from server when no cache
+			const fetchFromServer = async () => {
+				try {
+					setError(null);
+					const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`);
 					if (!res.ok) throw new Error(`Status ${res.status}`);
-					return res.json();
-				})
-				.then((data) => {
+					const data = await res.json();
 					const list = data || [];
 					setTariffs(list);
 					const originNames = Array.from(new Set(list.map(t => t.originCountry?.name).filter(Boolean))).sort();
 					setOrigins(originNames);
 					if (originNames.length > 0) setSelectedOrigin(originNames[0]);
-					// persist for future reloads
 					saveTariffsToCookie(list);
-				})
-				.catch((e) => setError(e.message || String(e)))
-				.finally(() => setLoading(false));
-		}, []);
+				} catch (e) {
+					setError(e.message || String(e));
+				} finally {
+					setLoading(false);
+				}
+			};
 
-		// Build and download CSV for current filtered view
-        const exportFilteredCSV = () => {
-            if (!selectedOrigin) return;
+			fetchFromServer();
+         }, []);
+		
+		// refresh helper used by the "Refresh cache" button
+		const refreshCacheAndFetch = useCallback(async () => {
+			clearTariffsCache();
+			setLoading(true);
+			setError(null);
+			try {
+				const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`);
+				if (!res.ok) throw new Error(`Status ${res.status}`);
+				const data = await res.json();
+				const list = data || [];
+				setTariffs(list);
+				const originNames = Array.from(new Set(list.map(t => t.originCountry?.name).filter(Boolean))).sort();
+				setOrigins(originNames);
+				if (originNames.length > 0) setSelectedOrigin(originNames[0]);
+				saveTariffsToCookie(list);
+			} catch (e) {
+				setError(e.message || String(e));
+			} finally {
+				setLoading(false);
+			}
+		}, [clearTariffsCache, saveTariffsToCookie]);
+ 
+        // Build and download CSV for current filtered view
+         const exportFilteredCSV = () => {
+             if (!selectedOrigin) return;
             let filtered = tariffs.filter(t => {
                 if (mode === 'export') return t.originCountry?.name === selectedOrigin;
                 return t.destCountry?.name === selectedOrigin;
@@ -298,10 +325,16 @@ export default function HeatmapPage() {
 										<button
 											className="px-3 py-1 bg-green-600 text-white rounded"
 											onClick={() => exportFilteredCSV()}
-											disabled={!selectedOrigin}
+											disabled={!selectedOrigin || loading}
 										>Export CSV</button>
+										<button
+											className="ml-2 px-3 py-1 bg-yellow-500 text-black rounded"
+											onClick={() => refreshCacheAndFetch()}
+											disabled={loading}
+											title="Clear cached tariffs (cookies/localStorage) and re-fetch from server"
+										>Refresh cache</button>
 									</div>
-                                </div>
+                                 </div>
 
 								<FilteredTable tariffs={tariffs} origin={selectedOrigin} mode={mode} />
 							</div>
