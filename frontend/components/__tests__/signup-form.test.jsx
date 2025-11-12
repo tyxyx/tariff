@@ -20,7 +20,7 @@ describe('SignupForm', () => {
   const ORIGINAL_ENV = process.env;
 
   beforeEach(() => {
-    process.env = { ...ORIGINAL_ENV, NEXT_PUBLIC_API_URL: 'http://localhost:8080' };
+    process.env = { ...ORIGINAL_ENV, NEXT_PUBLIC_BACKEND_EC2_HOST: 'localhost' };
     global.fetch = jest.fn();
     mockPush.mockClear();
     localStorage.clear();
@@ -112,19 +112,25 @@ describe('SignupForm', () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         'http://localhost:8080/api/users/register',
-        expect.objectContaining({
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'newuser@example.com', password: 'SecurePass1' }),
-        })
+        }
       );
     });
   });
 
   it('shows success message on successful signup', async () => {
+    // Mock register call
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ message: 'Account created!', token: 'mock-token' }),
+      json: async () => ({ message: 'Account created!' }),
+    });
+    // Mock login call after signup
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: 'Login successful!', token: 'mock-token' }),
     });
 
     render(<SignupForm />);
@@ -191,12 +197,18 @@ describe('SignupForm', () => {
   });
 
   it('shows loading text during submission', async () => {
+    // Mock register call
     global.fetch.mockImplementationOnce(() => 
       new Promise(resolve => setTimeout(() => resolve({
         ok: true,
-        json: async () => ({ message: 'Success', token: 'mock-token' }),
-      }), 100))
+        json: async () => ({ message: 'Success' }),
+      }), 50))
     );
+    // Mock login call
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: 'Login successful!', token: 'mock-token' }),
+    });
 
     render(<SignupForm />);
     
@@ -214,40 +226,24 @@ describe('SignupForm', () => {
     // Check loading state
     expect(screen.getByRole('button', { name: /creating account/i })).toBeInTheDocument();
 
-    // Wait for completion
+    // Wait for completion - increased timeout for the 2 second delay in signup
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /sign up/i })).toBeInTheDocument();
-    });
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    }, { timeout: 5000 });
   });
 
-  it('stores email in localStorage on successful signup', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Account created!', token: 'mock-token' }),
-    });
 
-    render(<SignupForm />);
-    
-    const inputs = screen.getAllByDisplayValue('');
-    const emailInput = inputs[0];
-    const passwordInput = inputs[1];
-    const confirmPasswordInput = inputs[2];
-    const submitButton = screen.getByRole('button', { name: /sign up/i });
-
-    fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'SecurePass1' } });
-    fireEvent.change(confirmPasswordInput, { target: { value: 'SecurePass1' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(localStorage.getItem('userEmail')).toBe('newuser@example.com');
-    });
-  });
 
   it('redirects to dashboard on successful signup', async () => {
+    // Mock register call
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ message: 'Account created!', token: 'mock-token' }),
+      json: async () => ({ message: 'Account created!' }),
+    });
+    // Mock login call
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: 'Login successful!', token: 'mock-token' }),
     });
 
     render(<SignupForm />);
@@ -265,6 +261,6 @@ describe('SignupForm', () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/dashboard');
-    });
+    }, { timeout: 5000 });
   });
 });

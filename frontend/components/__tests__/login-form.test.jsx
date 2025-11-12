@@ -20,7 +20,7 @@ describe('LoginForm', () => {
   const ORIGINAL_ENV = process.env;
 
   beforeEach(() => {
-    process.env = { ...ORIGINAL_ENV, NEXT_PUBLIC_API_URL: 'http://localhost:8080' };
+    process.env = { ...ORIGINAL_ENV, NEXT_PUBLIC_BACKEND_EC2_HOST: 'localhost' };
     global.fetch = jest.fn();
     mockPush.mockClear();
     localStorage.clear();
@@ -91,6 +91,7 @@ describe('LoginForm', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'test@example.com', password: 'Password1' }),
+          credentials: 'include',
         })
       );
     });
@@ -187,27 +188,7 @@ describe('LoginForm', () => {
     });
   });
 
-  it('stores email in localStorage on successful login', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Login successful!', token: 'mock-token' }),
-    });
 
-    render(<LoginForm />);
-    
-    const inputs = screen.getAllByDisplayValue('');
-    const emailInput = inputs[0];
-    const passwordInput = inputs[1];
-    const submitButton = screen.getByRole('button', { name: /login/i });
-
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'Password1' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(localStorage.getItem('userEmail')).toBe('test@example.com');
-    });
-  });
 
   it('redirects to dashboard on successful login', async () => {
     global.fetch.mockResolvedValueOnce({
