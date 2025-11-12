@@ -2,7 +2,7 @@ name: Scrapper
 on:
   push:
     branches:
-      # - main
+      - main
       - backend-scrapper
 
 jobs:
