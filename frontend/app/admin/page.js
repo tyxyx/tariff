@@ -28,6 +28,27 @@ export default function HeatmapPage() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+
+  // helper: backend may represent countries as either a plain string or an object { name }
+  const countryNameVal = (c) => (typeof c === "string" ? c : c?.name ?? "");
+  // helper: map a displayed country name to its code using countriesList
+  const countryCodeForName = (n) => {
+    if (!n) return null;
+    if (!countriesList || !countriesList.length) return n;
+    const found = countriesList.find(
+      (c) => (c?.name || "").toLowerCase() === String(n).toLowerCase()
+    );
+    if (found && found.code) return found.code;
+    // maybe the user already selected a code (value is code) — check by code
+    const foundByCode = countriesList.find((c) => String(c.code) === String(n));
+    if (foundByCode) return foundByCode.code;
+    return n;
+  };
+  // helper: normalize product HTS code field names
+  const productCodeVal = (p) =>
+    p?.HTS_code ?? p?.hts_code ?? p?.htscode ?? p?.HTSCode ?? p?.code ?? p?.id ?? "";
 
   // --- caching helpers: try cookie first, fallback to localStorage ---
   const clearTariffsCache = useCallback(() => {
@@ -96,6 +117,45 @@ export default function HeatmapPage() {
     }
   }, []);
 
+  // products list from backend (contains HTS_code and name)
+  const [productsList, setProductsList] = useState([]);
+  // countries list from backend (code + name)
+  const [countriesList, setCountriesList] = useState([]);
+
+  // fetch products from backend so we can show names and HTS codes
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(
+          `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/products`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data)) setProductsList(data);
+      } catch (e) {
+        console.warn("Failed fetching products", e);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  // fetch countries (code + name) to map names to codes for POST payloads
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch(
+          `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/countries`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data)) setCountriesList(data);
+      } catch (e) {
+        console.warn("Failed fetching countries", e);
+      }
+    };
+    fetchCountries();
+  }, []);
+
   // allow calling helpers from effect without listing them as deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -105,7 +165,7 @@ export default function HeatmapPage() {
     if (cached && Array.isArray(cached) && cached.length > 0) {
       setTariffs(cached);
       const originNames = Array.from(
-        new Set(cached.map((t) => t.originCountry?.name).filter(Boolean))
+        new Set(cached.map((t) => countryNameVal(t.originCountry)).filter(Boolean))
       ).sort();
       setOrigins(originNames);
       if (originNames.length > 0) setSelectedOrigin(originNames[0]);
@@ -125,7 +185,7 @@ export default function HeatmapPage() {
         const list = data || [];
         setTariffs(list);
         const originNames = Array.from(
-          new Set(list.map((t) => t.originCountry?.name).filter(Boolean))
+          new Set(list.map((t) => countryNameVal(t.originCountry)).filter(Boolean))
         ).sort();
         setOrigins(originNames);
         if (originNames.length > 0) setSelectedOrigin(originNames[0]);
@@ -154,7 +214,7 @@ export default function HeatmapPage() {
       const list = data || [];
       setTariffs(list);
       const originNames = Array.from(
-        new Set(list.map((t) => t.originCountry?.name).filter(Boolean))
+        new Set(list.map((t) => countryNameVal(t.originCountry)).filter(Boolean))
       ).sort();
       setOrigins(originNames);
       if (originNames.length > 0) setSelectedOrigin(originNames[0]);
@@ -171,6 +231,7 @@ export default function HeatmapPage() {
   const openCreateForm = () => {
     setEditingTariff(null);
     setFormError(null);
+    setFieldErrors({});
     setFormState({
       origin: selectedOrigin || "",
       dest: "",
@@ -187,12 +248,13 @@ export default function HeatmapPage() {
   const openEditForm = (t) => {
     setEditingTariff(t);
     setFormError(null);
+    setFieldErrors({});
     const productCodes = (t.products || [])
-      .map((p) => p.htsCode ?? p.code ?? p.name)
+      .map((p) => productCodeVal(p))
       .filter(Boolean);
     setFormState({
-      origin: t.originCountry?.name ?? "",
-      dest: t.destCountry?.name ?? "",
+      origin: countryNameVal(t.originCountry),
+      dest: countryNameVal(t.destCountry),
       effectiveDate: t.effectiveDate ?? "",
       expiryDate: t.expiryDate ?? t.endDate ?? t.validUntil ?? "",
       adValoremRate: t.adValoremRate ?? "",
@@ -212,6 +274,7 @@ export default function HeatmapPage() {
   const submitForm = async (e) => {
     e && e.preventDefault();
     setFormError(null);
+    setFieldErrors({});
     // basic validation
     if (!formState.origin || !formState.dest) {
       setFormError("Origin and destination are required.");
@@ -226,19 +289,57 @@ export default function HeatmapPage() {
         .map((s) => s.trim())
         .filter(Boolean);
 
+    // numeric parsing
+    const adValoremNum =
+      formState.adValoremRate === "" || formState.adValoremRate == null
+        ? null
+        : Number(formState.adValoremRate);
+    const specificNum =
+      formState.specificRate === "" || formState.specificRate == null
+        ? null
+        : Number(formState.specificRate);
+
+    // construct rate: user now enters the ad-valorem as a decimal (e.g. 0.12)
+    const rateVal = adValoremNum == null ? null : adValoremNum;
+
+  // hts code top-level (first selected product) — prefer first selection
+  const topHts = selectedProducts && selectedProducts.length ? selectedProducts[0] : null;
+
+  // treat empty expiry as null (send null when user left expiry blank)
+  let eff = (formState.effectiveDate || "").trim();
+  let exp = (formState.expiryDate || "").trim();
+ 
+
+    // find product name for each selected code (use productOptions if available)
+    const productsPayload = (selectedProducts || []).map((code) => {
+      const found = (productOptions || []).find(
+        (p) => (p.code && p.code === code) || (p.name && p.name === code)
+      );
+      return {
+        name: found?.name ?? code,
+        description: "Admin added",
+        enabled: true,
+      };
+    });
+
     const payload = {
-      originCountry: { name: formState.origin },
-      destCountry: { name: formState.dest },
-      effectiveDate: formState.effectiveDate || null,
-      expiryDate: formState.expiryDate || null,
-      adValoremRate:
-        formState.adValoremRate === "" ? null : Number(formState.adValoremRate),
-      specificRate:
-        formState.specificRate === "" ? null : Number(formState.specificRate),
-      products: selectedProducts.map((code) => ({ code })),
+      originCountry: countryCodeForName(formState.origin) || formState.origin,
+      destCountry: countryCodeForName(formState.dest) || formState.dest,
+      effectiveDate: eff || null,
+      expiryDate: exp || null,
+      rate: rateVal,
+      enabled: true,
+      // specificRate stored as provided (absolute amount)
+      specificRate: specificNum === null ? 0 : specificNum,
+      htscode: topHts || null,
+      products: productsPayload,
     };
 
     try {
+      // debug: log whether we're creating or updating and show payload
+      // (kept as console.debug so it doesn't clutter production logs)
+      console.debug("submitForm: editingTariff=", editingTariff);
+      console.debug("submitForm: formState=", formState);
       setIsSaving(true);
       const base = `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`;
       let res;
@@ -249,15 +350,38 @@ export default function HeatmapPage() {
           body: JSON.stringify(payload),
         });
       } else {
+        console.debug("submitForm: creating (POST)", payload);
+        console.debug("submitForm: payload JSON", JSON.stringify(payload));
         res = await fetch(base, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        console.debug("submitForm: POST request sent to", base);
       }
       if (!res.ok) {
-        const txt = await res.text().catch(() => null);
-        throw new Error(txt || `Status ${res.status}`);
+        // try to parse JSON body for validation errors
+        let body = null;
+        try {
+          body = await res.json();
+        } catch (e) {
+          // not JSON
+        }
+        if (body && typeof body === "object") {
+          // If the server returns a map of field->message, surface it
+          setFieldErrors(body);
+          const joined = Object.entries(body)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join("; ");
+          setFormError(joined || `Status ${res.status}`);
+        } else {
+          const txt = await res.text().catch(() => null);
+          const msg = txt || `Status ${res.status}`;
+          console.error("submitForm: server error:", msg);
+          setFormError(msg);
+        }
+        setIsSaving(false);
+        return;
       }
       const saved = await res.json().catch(() => null);
 
@@ -272,7 +396,7 @@ export default function HeatmapPage() {
         }
         setTariffs(next);
         const originNames = Array.from(
-          new Set(next.map((t) => t.originCountry?.name).filter(Boolean))
+          new Set(next.map((t) => countryNameVal(t.originCountry)).filter(Boolean))
         ).sort();
         setOrigins(originNames);
         if (!selectedOrigin && originNames.length) setSelectedOrigin(originNames[0]);
@@ -295,15 +419,16 @@ export default function HeatmapPage() {
     if (!confirm("Delete this tariff? This cannot be undone.")) return;
     try {
       setLoading(true);
+      // request permanent delete (softDelete=false) so the row is removed from DB
       const res = await fetch(
-        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/${t.id}`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/${t.id}?softDelete=false`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const next = tariffs.filter((x) => x.id !== t.id);
       setTariffs(next);
       const originNames = Array.from(
-        new Set(next.map((x) => x.originCountry?.name).filter(Boolean))
+        new Set(next.map((x) => countryNameVal(x.originCountry)).filter(Boolean))
       ).sort();
       setOrigins(originNames);
       if (selectedOrigin && !originNames.includes(selectedOrigin)) {
@@ -321,8 +446,8 @@ export default function HeatmapPage() {
   const exportFilteredCSV = () => {
     if (!selectedOrigin) return;
     let filtered = tariffs.filter((t) => {
-      if (mode === "export") return t.originCountry?.name === selectedOrigin;
-      return t.destCountry?.name === selectedOrigin;
+      if (mode === "export") return countryNameVal(t.originCountry) === selectedOrigin;
+      return countryNameVal(t.destCountry) === selectedOrigin;
     });
 
     // if user chose to hide expired, filter them out from CSV as well
@@ -346,9 +471,7 @@ export default function HeatmapPage() {
       return d.getTime() < Date.now();
     };
     const getCountryNameLocal = (t) =>
-      mode === "export"
-        ? t.destCountry?.name ?? ""
-        : t.originCountry?.name ?? "";
+      mode === "export" ? countryNameVal(t.destCountry) : countryNameVal(t.originCountry);
     const expiryTimeLocal = (t) => {
       const expiryRaw = t.expiryDate ?? t.endDate ?? t.validUntil ?? null;
       if (!expiryRaw) return Infinity;
@@ -376,14 +499,15 @@ export default function HeatmapPage() {
 
     if (!filtered.length) return;
     const rows = filtered.map((t) => ({
-      from: t.originCountry?.name ?? "",
-      to: t.destCountry?.name ?? "",
+      from: countryNameVal(t.originCountry) ?? "",
+      to: countryNameVal(t.destCountry) ?? "",
       effectiveDate: t.effectiveDate ?? "",
       expiryDate: t.expiryDate ?? t.endDate ?? t.validUntil ?? "",
-      adValoremRate: t.adValoremRate ?? "",
+      // adValoremRate stored in DB as decimal (e.g. 0.1) -> export as percentage (10.0)
+  adValoremRate: t.adValoremRate == null ? "" : Number(t.adValoremRate).toFixed(4),
       specificRate: t.specificRate ?? "",
       products: (t.products || [])
-        .map((p) => p.htsCode ?? p.code ?? p.name)
+        .map((p) => productCodeVal(p))
         .join(";"),
     }));
     const header = Object.keys(rows[0]);
@@ -416,8 +540,8 @@ export default function HeatmapPage() {
       );
     let filtered = (tariffs || []).filter((t) =>
       mode === "export"
-        ? t.originCountry?.name === origin
-        : t.destCountry?.name === origin
+        ? countryNameVal(t.originCountry) === origin
+        : countryNameVal(t.destCountry) === origin
     );
 
     // helper to determine expiry (treat missing/invalid expiry as active)
@@ -432,9 +556,7 @@ export default function HeatmapPage() {
     if (hideExpired) filtered = filtered.filter((t) => !isExpired(t));
 
     const getCountryName = (t) =>
-      mode === "export"
-        ? t.destCountry?.name ?? ""
-        : t.originCountry?.name ?? "";
+      mode === "export" ? countryNameVal(t.destCountry) : countryNameVal(t.originCountry);
 
     const expiryTime = (t) => {
       const expiryRaw = t.expiryDate ?? t.endDate ?? t.validUntil ?? null;
@@ -468,9 +590,8 @@ export default function HeatmapPage() {
 
     const count = sorted.length;
     const avgAd = (
-      sorted.reduce((s, t) => s + (t.adValoremRate || 0), 0) /
-      Math.max(1, count)
-    ).toFixed(2);
+      sorted.reduce((s, t) => s + (t.adValoremRate || 0), 0) / Math.max(1, count)
+    ).toFixed(4);
     const avgSpec = (
       sorted.reduce((s, t) => s + (t.specificRate || 0), 0) / Math.max(1, count)
     ).toFixed(2);
@@ -491,7 +612,7 @@ export default function HeatmapPage() {
                 </th>
                 <th className="text-left pr-4 pb-2">Effective</th>
                 <th className="text-left pr-4 pb-2">Expiry</th>
-                <th className="text-left pr-4 pb-2">Ad Valorem %</th>
+                <th className="text-left pr-4 pb-2">Ad Valorem</th>
                 <th className="text-left pr-4 pb-2">Specific</th>
                 <th className="text-left pr-4 pb-2">Products (HTS)</th>
                 <th className="text-right pr-4 pb-2">Actions</th>
@@ -510,16 +631,16 @@ export default function HeatmapPage() {
                   <tr key={t.id} style={rowStyle}>
                     <td className="pr-4 py-2">
                       {mode === "export"
-                        ? t.destCountry?.name ?? "-"
-                        : t.originCountry?.name ?? "-"}
+                        ? countryNameVal(t.destCountry) || "-"
+                        : countryNameVal(t.originCountry) || "-"}
                     </td>
                     <td className="pr-4 py-2">{t.effectiveDate ?? "-"}</td>
                     <td className="pr-4 py-2">{expiryRaw ?? "-"}</td>
-                    <td className="pr-4 py-2">{t.adValoremRate ?? "-"}</td>
+                    <td className="pr-4 py-2">{t.adValoremRate != null ? Number(t.adValoremRate).toFixed(4) : "-"}</td>
                     <td className="pr-4 py-2">{t.specificRate ?? "-"}</td>
                     <td className="pr-4 py-2">
                       {(t.products || [])
-                        .map((p) => p.htsCode ?? p.code ?? p.name)
+                        .map((p) => productCodeVal(p))
                         .slice(0, 5)
                         .join(", ")}
                       {(t.products || []).length > 5 ? "…" : ""}
@@ -550,21 +671,24 @@ export default function HeatmapPage() {
 
   // prepare dropdown options for countries and products
   const destinationNames = Array.from(
-    new Set(tariffs.map((t) => t.destCountry?.name).filter(Boolean))
+    new Set(tariffs.map((t) => countryNameVal(t.destCountry)).filter(Boolean))
   ).sort();
 
-  const productCodesFromTariffs = Array.from(
-    new Set(
-      tariffs
-        .flatMap((t) => (t.products || []).map((p) => p.htsCode ?? p.code ?? p.name))
-        .filter(Boolean)
+  // product options sourced from backend productsList (HTS_code and name)
+  const productOptions = (productsList || [])
+    .map((p) => {
+      // normalize possible HTS code property names returned by backend
+      const code = p?.HTS_code ?? p?.hts_code ?? p?.htscode ?? p?.HTSCode ?? p?.code ?? p?.id ?? "";
+      const name = p?.name ?? p?.productName ?? p?.label ?? code;
+      return { code, name, description: p?.description, enabled: p?.enabled };
+    })
+    // ensure selected values are present in the list (keep them even if backend list doesn't include them)
+    .concat(
+      (formState.productsSelected || [])
+        .filter((s) => !(productsList || []).some((p) => (p?.HTS_code ?? p?.hts_code ?? p?.htscode ?? p?.HTSCode ?? p?.code ?? p?.id) === s))
+        .map((code) => ({ code, name: code }))
     )
-  ).sort();
-
-  // ensure products selected in the form are included in options (so edit shows values even if not present globally)
-  const productOptions = Array.from(
-    new Set([...(productCodesFromTariffs || []), ...(formState.productsSelected || [])])
-  ).sort();
+    .filter((x) => x && (x.code || x.name));
 
   return (
     <div
@@ -665,7 +789,10 @@ export default function HeatmapPage() {
                         className="w-full px-2 py-1 bg-black border rounded"
                         value={formState.origin}
                         onChange={(e) =>
-                          setFormState((s) => ({ ...s, origin: e.target.value }))
+                          setFormState((s) => ({
+                            ...s,
+                            origin: e.target.value,
+                          }))
                         }
                       >
                         <option value="">-- select origin --</option>
@@ -696,10 +823,14 @@ export default function HeatmapPage() {
                     <div>
                       <label className="block text-sm">Effective</label>
                       <input
+                        type="date"
                         className="w-full px-2 py-1 bg-black border rounded"
                         value={formState.effectiveDate}
                         onChange={(e) =>
-                          setFormState((s) => ({ ...s, effectiveDate: e.target.value }))
+                          setFormState((s) => ({
+                            ...s,
+                            effectiveDate: e.target.value,
+                          }))
                         }
                         placeholder="YYYY-MM-DD"
                       />
@@ -707,33 +838,48 @@ export default function HeatmapPage() {
                     <div>
                       <label className="block text-sm">Expiry</label>
                       <input
+                        type="date"
                         className="w-full px-2 py-1 bg-black border rounded"
                         value={formState.expiryDate}
                         onChange={(e) =>
-                          setFormState((s) => ({ ...s, expiryDate: e.target.value }))
+                          setFormState((s) => ({
+                            ...s,
+                            expiryDate: e.target.value,
+                          }))
                         }
                         placeholder="YYYY-MM-DD"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm">Ad valorem %</label>
+                      <label className="block text-sm">
+                        Ad valorem (decimal)
+                      </label>
                       <input
                         className="w-full px-2 py-1 bg-black border rounded"
                         value={formState.adValoremRate}
                         onChange={(e) =>
-                          setFormState((s) => ({ ...s, adValoremRate: e.target.value }))
+                          setFormState((s) => ({
+                            ...s,
+                            adValoremRate: e.target.value,
+                          }))
                         }
                         type="number"
-                        step="0.01"
+                        step="0.0001"
+                        placeholder="e.g. 0.12"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm">Specific</label>
+                      <label className="block text-sm">
+                        Specific (decimal)
+                      </label>
                       <input
                         className="w-full px-2 py-1 bg-black border rounded"
                         value={formState.specificRate}
                         onChange={(e) =>
-                          setFormState((s) => ({ ...s, specificRate: e.target.value }))
+                          setFormState((s) => ({
+                            ...s,
+                            specificRate: e.target.value,
+                          }))
                         }
                         type="number"
                         step="0.01"
@@ -746,19 +892,31 @@ export default function HeatmapPage() {
                       <div className="flex gap-2">
                         <select
                           multiple
-                          size={Math.min(10, Math.max(3, productOptions.length))}
+                          size={Math.min(
+                            10,
+                            Math.max(3, productOptions.length)
+                          )}
                           className="w-full px-2 py-1 bg-black border rounded"
                           value={formState.productsSelected}
                           onChange={(e) => {
-                            const selected = Array.from(e.target.selectedOptions).map(
-                              (o) => o.value
-                            );
-                            setFormState((s) => ({ ...s, productsSelected: selected, productsRaw: selected.join(", ") }));
+                            const selected = Array.from(
+                              e.target.selectedOptions
+                            ).map((o) => o.value);
+                            setFormState((s) => ({
+                              ...s,
+                              productsSelected: selected,
+                              productsRaw: selected.join(", "),
+                            }));
                           }}
                         >
                           {productOptions.map((p) => (
-                            <option key={p} value={p}>
-                              {p}
+                            <option
+                              key={p.code || p.name}
+                              value={p.code || p.name}
+                            >
+                              {p.name && p.code
+                                ? `${p.name} (${p.code})`
+                                : p.name || p.code}
                             </option>
                           ))}
                         </select>
@@ -773,13 +931,30 @@ export default function HeatmapPage() {
                     <div className="text-red-400 mt-2">{formError}</div>
                   )}
 
+                  {Object.keys(fieldErrors || {}).length > 0 && (
+                    <div className="mt-2 text-sm text-yellow-300">
+                      <div className="font-medium">Validation errors:</div>
+                      <ul className="list-disc ml-5">
+                        {Object.entries(fieldErrors).map(([k, v]) => (
+                          <li key={k}>
+                            <strong>{k}</strong>: {String(v)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="mt-3 flex items-center">
                     <button
                       type="submit"
                       className="px-3 py-1 bg-green-600 text-white rounded"
                       disabled={isSaving}
                     >
-                      {isSaving ? "Saving..." : editingTariff ? "Save" : "Create"}
+                      {isSaving
+                        ? "Saving..."
+                        : editingTariff
+                        ? "Save"
+                        : "Create"}
                     </button>
                     <button
                       type="button"

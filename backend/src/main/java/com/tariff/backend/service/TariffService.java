@@ -35,10 +35,10 @@ public class TariffService {
   // Methods:
   // 1. add in new tariff
   public Tariff addTariff(AddTariffDTO addTariffDTO) {
-    // Validate the DTO fields
-    if (addTariffDTO.getEffectiveDate().isAfter(addTariffDTO.getExpiryDate())) {
-        throw new BadRequestException("Effective date cannot be after expiry date");
-    }
+  // Validate the DTO fields: only compare when expiry is provided
+  if (addTariffDTO.getExpiryDate() != null && addTariffDTO.getEffectiveDate().isAfter(addTariffDTO.getExpiryDate())) {
+    throw new BadRequestException("Effective date cannot be after expiry date");
+  }
 
   // Check if a tariff with the same HTS code exists for the given origin/dest
   Optional<Tariff> existingTariff = getTariffsByHtsCode(addTariffDTO.getHtscode())
@@ -69,12 +69,33 @@ public class TariffService {
   var dest = countries.findById(addTariffDTO.getDestCountry())
     .orElseThrow(() -> new BadRequestException("Destination country code not found: " + addTariffDTO.getDestCountry()));
 
-  tariff.setOriginCountry(origin);
-  tariff.setDestCountry(dest);
+    tariff.setOriginCountry(origin);
+    tariff.setDestCountry(dest);
     tariff.setEffectiveDate(addTariffDTO.getEffectiveDate());
     tariff.setExpiryDate(addTariffDTO.getExpiryDate());
-    // Map DTO rate to ad valorem rate (single percentage). Specific rate left null unless added later.
-    tariff.setAdValoremRate(addTariffDTO.getRate());
+  
+    // Prefer the new 'rate' field (stored as decimal, e.g. 0.12). If not provided, fall back
+    // to the older 'adValoremRate' percentage field (e.g. 12.5 -> 0.125).
+    if (addTariffDTO.getRate() != null) {
+      tariff.setAdValoremRate(addTariffDTO.getRate());
+    } else if (addTariffDTO.getAdValoremRate() != null) {
+      tariff.setAdValoremRate(addTariffDTO.getAdValoremRate() / 100.0);
+    } else {
+      // Defensive default: 0.0 when no rate supplied
+      tariff.setAdValoremRate(0.0);
+    }
+      
+    // map optional specific rate from DTO
+    if (addTariffDTO.getSpecificRate() != null) {
+      tariff.setSpecificRate(addTariffDTO.getSpecificRate());
+    }
+    // set enabled flag (default true when DTO omitted)
+    try {
+      tariff.setEnabled(addTariffDTO.isEnabled());
+    } catch (Exception e) {
+      // defensive: default to true
+      tariff.setEnabled(true);
+    }
 
     // Ensure the referenced product (by HTS code) exists and associate it
     Product product = products.findById(addTariffDTO.getHtscode()).orElseGet(() -> {
