@@ -11,6 +11,12 @@ on:
       - 'backend/**'
       - '.github/workflows/backend-codecov.yml'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
 jobs:
   test:
     runs-on: ubuntu-latest

@@ -11,6 +11,11 @@ on:
       - 'frontend/**'
       - '.github/workflows/frontend-codecov.yml'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
