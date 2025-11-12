@@ -1,18 +1,20 @@
 package com.tariff.backend.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.dto.AddTariffDTO;
 import com.tariff.backend.dto.ParticularTariffDTO;
+import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.exception.NotFoundException;
 import com.tariff.backend.model.Product;
 import com.tariff.backend.model.Tariff;
+import com.tariff.backend.repository.CountryRepository;
 import com.tariff.backend.repository.ProductRepository;
 import com.tariff.backend.repository.TariffRepository;
 
@@ -22,10 +24,12 @@ import jakarta.transaction.Transactional;
 public class TariffService {
   private final TariffRepository tariffs;
   private final ProductRepository products;
+  private final CountryRepository countries;
 
-  public TariffService(TariffRepository tariffs, ProductRepository products) {
+  public TariffService(TariffRepository tariffs, ProductRepository products, CountryRepository countries) {
     this.tariffs = tariffs;
     this.products = products;
+    this.countries = countries;
   }
 
   // Methods:
@@ -36,13 +40,14 @@ public class TariffService {
         throw new BadRequestException("Effective date cannot be after expiry date");
     }
 
-    // Check if a tariff with the same HTS code exists
-    Optional<Tariff> existingTariff = getTariffsByHtsCode(addTariffDTO.getHtscode())
-        .stream()
-        .filter(tariff -> tariff.getOriginCountry().equals(addTariffDTO.getOriginCountry()) &&
-                          tariff.getDestCountry().equals(addTariffDTO.getDestCountry()) &&
-                          tariff.getHTSCode().equals(addTariffDTO.getHtscode()))
-        .findFirst();
+  // Check if a tariff with the same HTS code exists for the given origin/dest
+  Optional<Tariff> existingTariff = getTariffsByHtsCode(addTariffDTO.getHtscode())
+    .stream()
+    .filter(tariff -> tariff.getOriginCountry() != null
+      && tariff.getOriginCountry().getCode().equals(addTariffDTO.getOriginCountry())
+      && tariff.getDestCountry() != null
+      && tariff.getDestCountry().getCode().equals(addTariffDTO.getDestCountry()))
+    .findFirst();
 
     if (existingTariff.isPresent()) {
       Tariff t = existingTariff.get();
@@ -57,26 +62,37 @@ public class TariffService {
     }
 
     // Map AddTariffDTO to Tariff entity
-    Tariff tariff = new Tariff();
-    tariff.setOriginCountry(addTariffDTO.getOriginCountry());
-    tariff.setDestCountry(addTariffDTO.getDestCountry());
+  Tariff tariff = new Tariff();
+  // Resolve countries from codes
+  var origin = countries.findById(addTariffDTO.getOriginCountry())
+    .orElseThrow(() -> new BadRequestException("Origin country code not found: " + addTariffDTO.getOriginCountry()));
+  var dest = countries.findById(addTariffDTO.getDestCountry())
+    .orElseThrow(() -> new BadRequestException("Destination country code not found: " + addTariffDTO.getDestCountry()));
+
+  tariff.setOriginCountry(origin);
+  tariff.setDestCountry(dest);
     tariff.setEffectiveDate(addTariffDTO.getEffectiveDate());
     tariff.setExpiryDate(addTariffDTO.getExpiryDate());
-    tariff.setRate(addTariffDTO.getRate());
-    tariff.setEnabled(addTariffDTO.isEnabled());
-    tariff.setHTSCode(addTariffDTO.getHtscode());
+    // Map DTO rate to ad valorem rate (single percentage). Specific rate left null unless added later.
+    tariff.setAdValoremRate(addTariffDTO.getRate());
 
-    // Map products from AddTariffDTO to Tariff
-    List<Product> productList = addTariffDTO.getProducts().stream().map(productDTO -> {
-        Product product = new Product();
-        product.setName(productDTO.getName());
-        product.setDescription(productDTO.getDescription());
-        return product;
-    }).toList();
+    // Ensure the referenced product (by HTS code) exists and associate it
+    Product product = products.findById(addTariffDTO.getHtscode()).orElseGet(() -> {
+      Product p = new Product();
+      p.setHTS_code(addTariffDTO.getHtscode());
+      // If provided, use the first product DTO for metadata
+      if (addTariffDTO.getProducts() != null && !addTariffDTO.getProducts().isEmpty()) {
+        var meta = addTariffDTO.getProducts().get(0);
+        p.setName(meta.getName());
+        p.setDescription(meta.getDescription());
+        p.setEnabled(meta.isEnabled());
+      }
+      return products.save(p);
+    });
 
-    tariff.setProducts(productList);
+    tariff.getProducts().add(product);
 
-    // Save the new tariff
+  // Save the new tariff
     return tariffs.save(tariff);
 }
 
@@ -85,9 +101,6 @@ public class TariffService {
     return tariffs.findById(tariffId).map(tariff -> {
       if (newTariff.getDestCountry() != null) {
         tariff.setDestCountry(newTariff.getDestCountry());
-      }
-      if (newTariff.getHTSCode() != null) {
-        tariff.setHTSCode(newTariff.getHTSCode());
       }
       if (newTariff.getOriginCountry() != null) {
         tariff.setOriginCountry(newTariff.getOriginCountry());
@@ -98,8 +111,11 @@ public class TariffService {
       if (newTariff.getExpiryDate() != null) {
         tariff.setExpiryDate(newTariff.getExpiryDate());
       }
-      if (newTariff.getRate() > 0) {
-        tariff.setRate(newTariff.getRate());
+      if (newTariff.getAdValoremRate() != null) {
+        tariff.setAdValoremRate(newTariff.getAdValoremRate());
+      }
+      if (newTariff.getSpecificRate() != null) {
+        tariff.setSpecificRate(newTariff.getSpecificRate());
       }
       return tariffs.save(tariff);
     }).orElseThrow(() -> new NotFoundException("Tariff not found"));
@@ -138,7 +154,7 @@ public class TariffService {
   }
 
   // 2b. remove product from tariff
-  public Tariff removeProductFromTariff(UUID tariffId, UUID productId) {
+  public Tariff removeProductFromTariff(UUID tariffId, String productId) {
     Tariff tariff = tariffs.findById(tariffId)
         .orElseThrow(() -> new NotFoundException("Tariff not found"));
 
@@ -158,7 +174,9 @@ public class TariffService {
         .orElseThrow(() -> new NotFoundException("Tariff not found"));
 
     if (softDelete) {
-      tariff.setEnabled(false);
+      // Soft-delete by moving expiry date to before effective date (or now - 1 day)
+      LocalDate base = tariff.getEffectiveDate() != null ? tariff.getEffectiveDate() : LocalDate.now();
+      tariff.setExpiryDate(base.minusDays(1));
       tariffs.save(tariff);
     } else {
       tariffs.delete(tariff);

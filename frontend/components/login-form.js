@@ -1,10 +1,10 @@
 "use client"; // This is a client component
 
 import React, { Children } from "react";
-import Form from "next/form";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 
 export function LoginForm({ children, className = "" }) {
@@ -14,45 +14,59 @@ export function LoginForm({ children, className = "" }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form reload
-    setError("");
-    setSuccess("");
+ const handleSubmit = async (e) => {
+   e.preventDefault();
+   setError("");
+   setSuccess("");
 
-    try {
-      const response = await fetch(
-        // TODO: change this to process.env
-        `http://18.139.89.63:8080/api/users/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
+   if (!email || !password) {
+     setError("Email and password are required");
+     return;
+   }
 
-      const data = await response.json();
+   setIsLoading(true);
 
-      if (!response.ok) {
-        setError(data.message || "Login failed");
-      }
+   try {
+     const response = await fetch(
+       `${process.env.NEXT_PUBLIC_API_URL}/api/users/login`,
+       {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+         },
+         body: JSON.stringify({ email, password }),
+       }
+     );
 
-      if (response.ok) {
-        setSuccess(data.message || "Login successful!");
-        localStorage.setItem("userEmail", email);
-        router.push("/dashboard");
-      }
+     const data = await response.json();
 
-      //   const data = await response.json();
-      //   console.log("Login success:", data);
+     if (!response.ok) {
+       setError(data.message || "Login failed");
+       return;
+     }
 
-      // TODO: JWT token, redirect user, etc.
-    } catch (err) {
-      console.error(err.message);
-    }
-  };
+     setSuccess(data.message || "Login successful!");
+     localStorage.setItem("userEmail", email);
+
+     if (data.token) {
+       Cookies.set("auth_token", data.token, {
+         expires: 7,
+         secure: true,
+         sameSite: "Strict",
+       });
+     }
+
+     router.push("/dashboard");
+   } catch (err) {
+     console.error("Login error:", err);
+     setError("Network error. Please try again.");
+   } finally {
+     setIsLoading(false);
+   }
+ }; // ✅ All brackets are closed properly
+
 
   return (
     <div>
@@ -76,8 +90,8 @@ export function LoginForm({ children, className = "" }) {
         {error && <p className="text-red-500">{error}</p>}
         {success && <p className="text-green-500">{success}</p>}
 
-        <Button className="mt-6" type="submit">
-          Login
+        <Button className="mt-6" type="submit" disabled={isLoading}>
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
       </form>
     </div>

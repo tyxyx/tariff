@@ -63,7 +63,7 @@ public class TariffController {
   }
 
   @DeleteMapping("/{id}/remove-product/{productId}")
-  public ResponseEntity<Tariff> removeProductFromTariff(@PathVariable UUID id, @PathVariable UUID productId) {
+  public ResponseEntity<Tariff> removeProductFromTariff(@PathVariable UUID id, @PathVariable String productId) {
     return ResponseEntity.ok().body(tariffService.removeProductFromTariff(id, productId));
   }
 

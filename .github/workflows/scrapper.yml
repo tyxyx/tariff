@@ -1,0 +1,41 @@
+name: Scrapper
+on:
+  push:
+    branches:
+      - main
+      - backend-scrapper
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Step 2: Set up SSH with PEM key
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SCRAPPER_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/scrapper.pem
+        chmod 400 ~/.ssh/scrapper.pem
+        ssh-keyscan -H ${{ secrets.SCRAPPER_EC2_HOST }} >> ~/.ssh/known_hosts
+
+    # Step 3: Copy files to EC2
+    - name: Copy files to EC2
+      run: |
+        scp -i ~/.ssh/scrapper.pem \
+          scrapper/requirements.txt \
+          scrapper/scrapper.py \
+          ${{ secrets.SCRAPPER_EC2_USER }}@${{ secrets.SCRAPPER_EC2_HOST }}:${{ secrets.SCRAPPER_EC2_DEPLOY_PATH }}
+
+    # Step 4: SSH into EC2 and install/restart (optional)
+    - name: Install dependencies and restart service
+      run: |
+        ssh -i ~/.ssh/scrapper.pem ${{ secrets.SCRAPPER_EC2_USER }}@${{ secrets.SCRAPPER_EC2_HOST }} << 'EOF'
+          cd ${{ secrets.SCRAPPER_EC2_DEPLOY_PATH }}
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          deactivate
+        EOF

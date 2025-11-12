@@ -1,59 +1,179 @@
-GET http://localhost:8080/health
+@baseUrl = http://localhost:8080
+@json = application/json
 
-###
+### Health check
+GET {{baseUrl}}/health
 
-GET http://localhost:8080/api/students/allStudents
-
-###
-
-POST http://localhost:8080/api/students/addStudent
-Content-Type: application/json
-
-{
-  "name": "hahu"
-}
-
-###
-
-DELETE http://localhost:8080/api/students/delete/6
-
-### Register a New User
-POST http://localhost:8080/api/users/register
-Content-Type: application/json
+### Users: register
+### @name registerUser
+POST {{baseUrl}}/api/users/register
+Content-Type: {{json}}
 
 {
   "email": "testuser@example.com",
-  "password": "strongPassword123"
+  "password": "StrongPassword123!"
 }
 
-### Log in an Existing User
-POST http://localhost:8080/api/users/login
-Content-Type: application/json
+### Users: login
+### @name loginUser
+POST {{baseUrl}}/api/users/login
+Content-Type: {{json}}
 
 {
   "email": "testuser@example.com",
-  "password": "strongPassword123"
+  "password": "StrongPassword123!"
 }
 
-### Change Password for an Existing User
-POST http://localhost:8080/api/users/change-password
-Content-Type: application/json
+### Users: change password
+PUT {{baseUrl}}/api/users/change-password
+Content-Type: {{json}}
 
 {
   "email": "testuser@example.com",
-  "password": "strongPassword123",
-  "newPassword" : "Newstrongpassword456" 
+  "password": "StrongPassword123!",
+  "newPassword": "NewStrongPassword456!"
 }
 
+### Users: list all
+GET {{baseUrl}}/api/users/
 
-### Update Existing User
-POST http://localhost:8080/api/users/login/
-Content-Type: application/json
+### Countries: create US
+POST {{baseUrl}}/api/countries
+Content-Type: {{json}}
 
 {
-  "email": "testuser@example.com",
-  "password": "strongpassword123"
+  "code": "US",
+  "name": "United States"
 }
 
-GET http://localhost:8080/api/users/
+### Countries: create CN
+POST {{baseUrl}}/api/countries
+Content-Type: {{json}}
+
+{
+  "code": "CN",
+  "name": "China"
+}
+
+### Countries: list all
+GET {{baseUrl}}/api/countries
+
+### Countries: get by code (US)
+GET {{baseUrl}}/api/countries/US
+
+### Countries: update name (US)
+PUT {{baseUrl}}/api/countries/US
+Content-Type: {{json}}
+
+{
+  "code": "US",
+  "name": "United States of America"
+}
+
+### Products: create
+### @name createProduct
+POST {{baseUrl}}/api/products
+Content-Type: {{json}}
+
+{
+  "name": "Smartphone",
+  "description": "5G-enabled smartphone",
+  "enabled": true
+}
+
+### Products: list all
+### @name listProducts
+GET {{baseUrl}}/api/products
+
+### Products: get first product id from list
+@productId = {{listProducts.response.body.$[0].HTS_code}}
+GET {{baseUrl}}/api/products/{{productId}}
+
+### Products: update
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: {{json}}
+
+{
+  "name": "Smartphone Pro",
+  "description": "6.7 inch 5G smartphone with better camera",
+  "enabled": true
+}
+
+### Products: delete (soft by default)
+DELETE {{baseUrl}}/api/products/{{productId}}
+
+### Tariffs: create (requires existing countries and product HTS code)
+### Using HTS code '8517.12.00' and countries CN -> US
+### @name createTariff
+POST {{baseUrl}}/api/tariffs
+Content-Type: {{json}}
+
+{
+  "originCountry": "CN",
+  "destCountry": "US",
+  "effectiveDate": "2025-01-01",
+  "expiryDate": "2025-12-31",
+  "rate": 5.5,
+  "enabled": true,
+  "htscode": "8517.12.00",
+  "products": [
+    {
+      "name": "Mobile Phone",
+      "description": "Handheld device",
+      "enabled": true
+    }
+  ]
+}
+
+### Tariffs: list all
+### @name listTariffs
+GET {{baseUrl}}/api/tariffs
+
+### Capture first tariff id from list
+@tariffId = {{listTariffs.response.body.$[0].id}}
+
+### Tariffs: get by id
+GET {{baseUrl}}/api/tariffs/{{tariffId}}
+
+### Tariffs: search by HTS code
+GET {{baseUrl}}/api/tariffs/getByHtsCode?htsCode=8517.12.00
+
+### Tariffs: get particular tariff rate
+POST {{baseUrl}}/api/tariffs/particular-tariff-rate
+Content-Type: {{json}}
+
+{
+  "date": "2025-06-01",
+  "originCountry": "CN",
+  "destCountry": "US",
+  "productName": "Mobile Phone"
+}
+
+### Tariffs: update selected fields
+PUT {{baseUrl}}/api/tariffs/{{tariffId}}
+Content-Type: {{json}}
+
+{
+  "expiryDate": "2026-01-31",
+  "adValoremRate": 6.25
+}
+
+### Tariffs: add another product by name
+POST {{baseUrl}}/api/tariffs/{{tariffId}}/add-product
+Content-Type: {{json}}
+
+{
+  "name": "Tablet",
+  "description": "10-inch tablet",
+  "enabled": true
+}
+
+### Tariffs: remove product by HTS code (use the main HTS code)
+DELETE {{baseUrl}}/api/tariffs/{{tariffId}}/remove-product/8517.12.00
+
+### Tariffs: delete (soft delete by default)
+DELETE {{baseUrl}}/api/tariffs/{{tariffId}}
+
+### Countries: delete (US) — run last if you want to clean up
+DELETE {{baseUrl}}/api/countries/US
 
