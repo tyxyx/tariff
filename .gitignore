@@ -2,6 +2,5 @@
 node_modules
 # Local .terraform directories
 **/.terraform/*
-backEndKeyPair.pem
-frontEndKeyPair.pem
-.env
+*.pem
+*.pub
