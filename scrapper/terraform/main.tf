@@ -104,7 +104,7 @@ resource "aws_instance" "scrapper" {
     "sudo apt-get install -y python3.12 python3.12-venv python3-pip",  # Use python3-pip instead
     "chmod +x /home/ubuntu/scrapper.py",
     "python3.12 -m venv /home/ubuntu/.venv",  # Create venv with python3.12
-    "chmod +x /home/ubuntu/.venv/bin/pip",
+    "chmod +x /home/ubuntu/.venv/bin/activate",
     "/home/ubuntu/.venv/bin/pip install --upgrade pip",
     "/home/ubuntu/.venv/bin/pip install -r /home/ubuntu/requirements.txt"
   ]
