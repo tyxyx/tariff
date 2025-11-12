@@ -12,52 +12,38 @@ import "react-datepicker/dist/react-datepicker.css";
 import "react-datepicker/dist/react-datepicker.css";
 import "./datepicker-dark.css";
 
-// Hardcoded for now
-const countries = [
-  "United States",
-  "China",
-  "Germany",
-  "Japan",
-  "Singapore",
-  "India",
-  "Australia",
-  "United Kingdom",
-];
-
-const products = [
-  "Semiconductors",
-  "Laptops",
-  "Smartphones",
-  "Solid State Drives (SSD)",
-  "Graphic Processing Units (GPU)"
-];
-
 export default function CalculatorPage() {
+  const [countries, setCountries] = useState([]);
+  const [products, setProducts] = useState([]);
   const [product, setProduct] = useState("");
   const [originCountry, setImportCountry] = useState("");
   const [destCountry, setExportCountry] = useState("");
-  const [tariffRate, setTariffRate] = useState(0);
+  const [adValoremRate, setAdValoremRate] = useState(0);
+  const [specificRate, setSpecificRate] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(1000);
   const [calculationDate, setCalculationDate] = useState("");
-  const [dateError, setDateError] = useState("");
   const [activeTab, setActiveTab] = useState("calculator");
 
-  // function getTariffRate(product, originCountry, destCountry) {
-  //   // Replace ltrrrrrrrrrrrr
-  //   if (product && originCountry && destCountry) {
-  //     if (originCountry === destCountry) return 0;
-  //     if (product === "Laptops" && originCountry === "United States" && destCountry === "China") return 0.15;
-  //     return 0.10; // fixed for now~
-  //   }
-  //   return 0;
-  // }
+  // Fetch countries and products on page load
+  useEffect(() => {
+    fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/countries`)
+      .then((res) => res.json())
+      .then((data) => setCountries(data))
+      .catch(() => setCountries([]));
 
-  // useEffect(() => {
-  //   setTariffRate(getTariffRate(product, originCountry, destCountry));
-  // }, [product, originCountry, destCountry]);
+    fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/products`)
+      .then((res) => res.json())
+      .then(data => {
+        console.log('Fetched products:', data);
+        // Make sure data is an array
+        if (Array.isArray(data)) setProducts(data);
+        else setProducts([]);
+      })
+      .catch(() => setProducts([]));
+  }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     // Only call API if all fields are filled and calculationDate is valid
     if (
       product &&
@@ -82,17 +68,20 @@ export default function CalculatorPage() {
       })
         .then(res => res.json())
         .then(data => {
-          // Assume API returns { tariffRate: 0.15 }
-          setTariffRate(data.rate ?? 0);
+          setAdValoremRate(data.adValoremRate ?? 0);
+          setSpecificRate(data.specificRate ?? 0);
         })
         .catch(() => setTariffRate(0));
     } else {
-      setTariffRate(0);
+      setAdValoremRate(0);
+      setSpecificRate(0);
     }
   }, [product, originCountry, destCountry, calculationDate]);
 
   // Calculate tariff amount
-  const tariffAmount = quantity * unitPrice * (tariffRate);
+  const amountSpecific = specificRate * quantity;
+  const amountAdValorem = (adValoremRate / 100) * (unitPrice * quantity);
+
 
   return (
     <div
@@ -140,7 +129,7 @@ export default function CalculatorPage() {
                   >
                     <option value="" disabled hidden>Select product</option>
                     {products.map(product => (
-                      <option key={product} value={product}>{product}</option>
+                      <option key={product.name} value={product.name}>{product.name}</option>
                     ))}
                   </select>
                 </div>
@@ -154,7 +143,7 @@ export default function CalculatorPage() {
                   >
                     <option value="" disabled hidden>Select country</option>
                     {countries.map(country => (
-                      <option key={country} value={country}>{country}</option>
+                      <option key={country.name} value={country.name}>{country.name}</option>
                     ))}
                   </select>
                 </div>
@@ -168,7 +157,7 @@ export default function CalculatorPage() {
                   >
                     <option value="" disabled hidden>Select country</option>
                     {countries.map(country => (
-                      <option key={country} value={country}>{country}</option>
+                      <option key={country.name} value={country.name}>{country.name}</option>
                     ))}
                   </select>
                 </div>
@@ -216,11 +205,23 @@ export default function CalculatorPage() {
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-medium">Tariff Rate</label>
+                  <label className="block mb-1 font-medium">Specific Rate</label>
                   <input
                     type="text"
+                    id="specificRate"
                     className="w-full border rounded px-3 py-2"
-                    value={tariffRate ? `${(tariffRate * 100).toFixed(2)}%` : ""}
+                    value={specificRate}
+                    readOnly
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Ad Valorem Rate (%)</label>
+                  <input
+                    type="text"
+                    id="adValoremRate"
+                    className="w-full border rounded px-3 py-2"
+                    value={adValoremRate}
                     readOnly
                     style={{ backgroundColor: "black", color: "white" }}
                   />
@@ -273,15 +274,10 @@ export default function CalculatorPage() {
               <li>
                 <strong>Calculation Date:</strong> {calculationDate ? calculationDate.toLocaleDateString() : "-"}
               </li>
-              <li>
-                <strong>Tariff Rate:</strong> {tariffRate ? `${(tariffRate * 100).toFixed(2)}%` : "-"}
-              </li>
-              <li>
-                <strong>Tariff Amount:</strong>{" "}
-                {product && originCountry && destCountry && quantity && unitPrice
-                  ? `$${tariffAmount.toLocaleString()}`
-                  : "-"}
-              </li>
+              <li><strong>Specific Rate:</strong> {specificRate}</li>
+              <li><strong>Ad Valorem Rate (%):</strong> {adValoremRate}</li>
+              <li><strong>Specific Duty Amount:</strong> {amountSpecific.toLocaleString()}</li>
+              <li><strong>Ad Valorem Duty Amount:</strong> {amountAdValorem.toLocaleString()}</li>
             </ul>
           </CardContent>
         </Card>

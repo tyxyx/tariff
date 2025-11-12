@@ -1,63 +1,241 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog"; // Reusable Dialog
 import { colors } from "@/styles/colors";
-import { apiFetch } from "@/utils/apiClient"; // import apiFetch
+import { apiFetch } from "@/utils/apiClient";
 
 export function UserTable() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEmail, setEditingEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [actionError, setActionError] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/`);
-        const data = await res.json();
-        setUsers(data);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      } finally {
-        setLoading(false);
+  //  To track the intended action (delete or role change) and the new role
+  const [dialogAction, setDialogAction] = useState({
+    type: "delete",
+    newRole: null,
+  });
+
+  // Function to fetch users (used for initial load and refetch)
+  const fetchUsers = useCallback(async () => {
+    setFetchError(null);
+    try {
+      setLoading(true);
+      const res = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/`
+      );
+      if (!res.ok) {
+        throw new Error(`Failed to fetch users. Status: ${res.status}`);
       }
-    };
-    fetchUsers();
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setFetchError(err.message || "Network error during initial fetch.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleDelete = async (username) => {
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // --- API Functions ---
+
+  const handleDelete = async (userEmail) => {
+    setActionError(null);
     try {
-      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${username}`, {
-        method: "DELETE",
-      });
+      const res = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: userEmail }),
+        }
+      );
       if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.username !== username));
+        fetchUsers();
+      } else {
+        setActionError(`Failed to delete user. Status: ${res.status}`);
       }
     } catch (err) {
       console.error("Error deleting user:", err);
+      setActionError("Network error during delete operation.");
     }
   };
 
-  const handleEmailUpdate = async (username) => {
+  // Handle role update API call
+  const handleRoleUpdate = async (userEmail, newRole) => {
+    setActionError(null);
     try {
-      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${username}/username`, {
-        method: "PUT",
-        body: JSON.stringify({ username: editingEmail }),
-      });
+      const res = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/upgrade-role`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userEmail,
+          }),
+        }
+      );
       if (res.ok) {
-        alert("Email updated successfully!");
-        setEditingEmail("");
-        // Optionally refresh users
+        alert(`Role updated to ${newRole} successfully!`);
+        fetchUsers(); // Refresh data to show new role
+      } else {
+        setActionError(`Failed to update role. Status: ${res.status}`);
       }
     } catch (err) {
-      console.error("Error updating email:", err);
+      console.error("Error updating role:", err);
+      setActionError("Network error during role update.");
     }
   };
+
+  // --- Dialog Control Functions ---
+
+  const openDeleteDialog = (user) => {
+    setSelectedUser(user);
+    setDialogAction({ type: "delete", newRole: null });
+    setIsDialogOpen(true);
+  };
+
+  const openRoleUpdateDialog = (user, role) => {
+    setSelectedUser(user);
+    setDialogAction({ type: "role", newRole: role });
+    setIsDialogOpen(true);
+  };
+
+  const handleConfirmAction = () => {
+    if (!selectedUser) return;
+
+    if (dialogAction.type === "delete") {
+      handleDelete(selectedUser.username);
+    } else if (dialogAction.type === "role" && dialogAction.newRole) {
+      handleRoleUpdate(selectedUser.username, dialogAction.newRole);
+    }
+    setIsDialogOpen(false);
+  };
+
+  // --- Render Logic ---
+
+  const currentError = fetchError || actionError;
+
+  // if (currentError) {
+  //   return (
+  //     <div className="p-4 rounded-md text-red-700 bg-red-100 border border-red-400">
+  //       <h2 className="font-bold text-lg">⚠️ Error</h2>
+  //       <p>**{currentError}**</p>
+  //       <Button
+  //         onClick={fetchUsers}
+  //         className="mt-3 bg-red-600 hover:bg-red-700 text-white"
+  //       >
+  //         Try Again
+  //       </Button>
+  //     </div>
+  //   );
+  // }
+
+  // Parse status code and message
+  let statusCode;
+  let errorMessage = "An unexpected error occurred.";
+
+  if (currentError) {
+    if (typeof currentError === "object") {
+      statusCode = currentError.status;
+      errorMessage = currentError.message || errorMessage;
+    } else if (typeof currentError === "string") {
+      if (currentError === "Failed to fetch") {
+        statusCode = "FETCH";
+        errorMessage =
+          "Cannot connect to the server. Please check your network or try again later.";
+      } else {
+        const match = currentError.match(/(\d{3})/);
+        statusCode = match ? match[1] : null;
+        errorMessage = currentError;
+      }
+    }
+  }
+
+  if (currentError) {
+    // Fail page block variant for fetch/network/403 errors
+    const is403 = statusCode === "403" || errorMessage.includes("403");
+    const isFetch =
+      statusCode === "FETCH" || errorMessage === "Failed to fetch";
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center"
+        style={{
+          background: "#171924",
+          color: "#ff5151",
+        }}
+      >
+        <div
+          className="p-8 rounded-lg border shadow-lg"
+          style={{
+            background: "#1b1e2b",
+            borderColor: "#512f3d",
+            color: "#ff5151",
+            boxShadow: "0 2px 10px rgba(80,47,61, 0.1)",
+          }}
+        >
+          <div className="flex items-center mb-4">
+            <span
+              style={{
+                display: "inline-block",
+                width: "2rem",
+                height: "2rem",
+                background: "#512f3d",
+                color: "#fff",
+                borderRadius: "999px",
+                textAlign: "center",
+                fontWeight: "bold",
+                fontSize: "1.3rem",
+                marginRight: "1rem",
+              }}
+            >
+              {is403 ? "🔒" : isFetch ? "🌐" : "⚠️"}
+            </span>
+            <h1
+              className="font-bold text-2xl"
+              style={{ color: "#fff", margin: 0 }}
+            >
+              {is403 ? "Access Denied" : isFetch ? "Network Error" : "Error"}
+            </h1>
+          </div>
+          <div
+            style={{
+              color: "#ff5151",
+              fontWeight: "bold",
+              marginBottom: "1.2rem",
+              fontSize: "1.1rem",
+            }}
+          >
+            {is403
+              ? "You do not have permission to access this page. Please contact your administrator if you need access."
+              : errorMessage}
+          </div>
+          <div style={{ color: "#fff", opacity: 0.7 }}>
+            {is403
+              ? "(Error 403: Forbidden)"
+              : isFetch
+                ? "(Could not reach backend server)"
+                : statusCode
+                  ? `(Error ${statusCode})`
+                  : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return <p>Loading users...</p>;
 
@@ -78,47 +256,58 @@ export function UserTable() {
               <td className="p-3 capitalize">{user.role}</td>
               <td className="p-3">
                 <div className="flex flex-col md:flex-row gap-3 items-center">
+                  {/* Role Change Buttons */}
+                  {user.role === "admin" ? (
+                    <Button
+                      onClick={() => openRoleUpdateDialog(user, "user")}
+                      className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                    >
+                      Downgrade to User
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => openRoleUpdateDialog(user, "admin")}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Upgrade to Admin
+                    </Button>
+                  )}
+
                   <Button
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setIsDialogOpen(true);
-                    }}
+                    onClick={() => openDeleteDialog(user)}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     Delete
                   </Button>
-
-                  <div className="flex items-center gap-2">
-                    <Input
-                      label="New Email"
-                      type="email"
-                      value={editingEmail}
-                      onChange={(e) => setEditingEmail(e.target.value)}
-                    />
-                    <Button
-                      onClick={() => handleEmailUpdate(user.username)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      Update
-                    </Button>
-                  </div>
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
-
       </table>
 
+      {/* 3. Conditional ConfirmDialog Rendering */}
       {isDialogOpen && selectedUser && (
         <ConfirmDialog
-          title="Confirm Deletion"
-          message={`Are you sure you want to delete ${selectedUser.username}?`}
-          onConfirm={() => {
-            handleDelete(selectedUser.username);
-            setIsDialogOpen(false);
-          }}
+          title={
+            dialogAction.type === "delete"
+              ? "Confirm Deletion"
+              : "Confirm Role Change"
+          }
+          message={
+            dialogAction.type === "delete"
+              ? `Are you sure you want to delete ${selectedUser.username}? This action cannot be undone.`
+              : `Are you sure you want to change ${selectedUser.username}'s role to **${dialogAction.newRole}**?`
+          }
+          onConfirm={handleConfirmAction}
           onCancel={() => setIsDialogOpen(false)}
+          // Pass dynamic button props to ConfirmDialog
+          confirmText={
+            dialogAction.type === "delete" ? "Delete" : "Confirm Change"
+          }
+          confirmColor={
+            dialogAction.type === "delete" ? "bg-red-600" : "bg-green-600"
+          }
         />
       )}
     </div>
