@@ -37,17 +37,13 @@ describe('Button Component', () => {
     render(<Button>Hover me</Button>);
     const button = screen.getByText('Hover me');
     
-    // Initial state
     const initialBg = button.style.backgroundColor;
     
-    // Hover
     fireEvent.mouseEnter(button);
     const hoverBg = button.style.backgroundColor;
     
-    // Should change on hover
     expect(hoverBg).not.toBe(initialBg);
     
-    // Mouse leave
     fireEvent.mouseLeave(button);
     expect(button.style.backgroundColor).toBe(initialBg);
   });
