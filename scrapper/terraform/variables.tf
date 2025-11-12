@@ -37,3 +37,14 @@ variable "scrapper_file_path" {
   type    = string
   default = "../scrapper.py" # Path to the environment variables file
 }
+
+variable "elastic_ip" {
+  type = string
+  default = "54.169.0.30"
+}
+
+variable "cron_schedule" {
+  description = "Cron schedule for scrapper"
+  type        = string
+  default     = "0 2 * * 0"  # Default: Sunday at 2 AM
+}

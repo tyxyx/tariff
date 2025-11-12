@@ -106,7 +106,20 @@ resource "aws_instance" "scrapper" {
     "python3.12 -m venv /home/ubuntu/.venv",  # Create venv with python3.12
     "chmod +x /home/ubuntu/.venv/bin/activate",
     "/home/ubuntu/.venv/bin/pip install --upgrade pip",
-    "/home/ubuntu/.venv/bin/pip install -r /home/ubuntu/requirements.txt"
+    "/home/ubuntu/.venv/bin/pip install -r /home/ubuntu/requirements.txt",
+
+    # Create a shell script wrapper for the cron job
+    "cat > /home/ubuntu/run_scrapper.sh << 'EOF'",
+    "#!/bin/bash",
+    "cd /home/ubuntu",
+    "source /home/ubuntu/.venv/bin/activate",
+    "python3 /home/ubuntu/scrapper.py >> /home/ubuntu/scrapper.log 2>&1",
+    "EOF",
+    
+    "chmod +x /home/ubuntu/run_scrapper.sh",
+    
+    # Add cron job (runs every Sunday at 2 AM)
+    "(crontab -l 2>/dev/null; echo '${var.cron_schedule} /home/ubuntu/run_scrapper.sh') | crontab -",
   ]
   connection {
     type        = "ssh"
@@ -116,22 +129,23 @@ resource "aws_instance" "scrapper" {
   }
 }
 }
-
-resource "aws_eip" "scrapper_eip" {}
+data "aws_eip" "existing" {
+  public_ip = var.elastic_ip  # Or use id = var.elastic_ip_id if you have the allocation ID
+}
 
 resource "aws_eip_association" "scrapper_eip_assoc" {
   instance_id   = aws_instance.scrapper.id
-  allocation_id = aws_eip.scrapper_eip.id
+  allocation_id = data.aws_eip.existing.id
 }
 
 output "private_key_path" {
   value = var.private_key_path
 }
 
-output "elastic_ip" {
-  value = aws_eip.scrapper_eip.public_ip
+output "public_ip" {
+  value = var.elastic_ip
 }
 
 output "ssh_command" {
-  value = "ssh -i ${var.private_key_path} ubuntu@${aws_eip.scrapper_eip.public_ip}"
+  value = "ssh -i ${var.private_key_path} ubuntu@${var.elastic_ip}"
 }
