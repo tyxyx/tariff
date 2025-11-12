@@ -6,13 +6,15 @@ import { Calculator, User, ShieldCheck } from "lucide-react";
 import { colors } from "@/styles/colors";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useApiData } from "@/utils/useApiData"
+import { useApiData } from "@/utils/useApiData";
 
 export default function PageHeader() {
   const router = useRouter();
-  const { data: user, loading, error } = useApiData(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/users/me`
-  );
+  const {
+    data: user,
+    loading,
+    error,
+  } = useApiData(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`);
 
   useEffect(() => {
     if (loading) return;
@@ -25,7 +27,7 @@ export default function PageHeader() {
     // if (!email) {
     //   router.push("/login");
     // }
-  },[loading, error, user, router]);
+  }, [loading, error, user, router]);
 
   const handleLogout = () => {
     // localStorage.removeItem("userEmail");
@@ -41,7 +43,9 @@ export default function PageHeader() {
             <Link href="/">
               <div className="flex items-center gap-2">
                 <Calculator className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold text-white">TariffCalc Pro</h1>
+                <h1 className="text-2xl font-bold text-white">
+                  TariffCalc Pro
+                </h1>
               </div>
             </Link>
             <div className="flex items-center gap-4">
@@ -53,7 +57,7 @@ export default function PageHeader() {
     );
   }
 
-  const username = user.email.split('@')[0];
+  const username = user.email.split("@")[0];
 
   return (
     <header style={{ backgroundColor: colors.card, color: colors.text }}>
