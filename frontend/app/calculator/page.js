@@ -650,14 +650,14 @@ export default function CalculatorPage() {
               <li>
                 <strong>Ad Valorem Rate (%):</strong> {adValoremRate}
               </li>
-              <li>
+              {/* <li>
                 <strong>Specific Duty Amount:</strong>{" "}
                 {amountSpecific.toLocaleString()}
               </li>
               <li>
                 <strong>Ad Valorem Duty Amount:</strong>{" "}
                 {amountAdValorem.toLocaleString()}
-              </li>
+              </li> */}
               <li>
                 <strong>Specific Rate:</strong> {summarySpecificRate}
               </li>
