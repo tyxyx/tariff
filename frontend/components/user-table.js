@@ -9,6 +9,7 @@ import { apiFetch } from "@/utils/apiClient";
 
 export function UserTable() {
   const [users, setUsers] = useState([]);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,8 +44,44 @@ export function UserTable() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    const fetchInitialData = async () => {
+      setFetchError(null);
+      setLoading(true);
+      try {
+        // Fetch current user and all users at the same time
+        const [meRes, usersRes] = await Promise.all([
+          apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`),
+          apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/`),
+        ]);
+
+        // 1. Handle the /me response
+        if (!meRes.ok) {
+          throw new Error(
+            `Failed to fetch current user. Status: ${meRes.status}`
+          );
+        }
+        const meData = await meRes.json();
+        // Based on your code, the 'username' field holds the email
+        setCurrentUserEmail(meData.username);
+
+        // 2. Handle the /users response
+        if (!usersRes.ok) {
+          throw new Error(
+            `Failed to fetch user list. Status: ${usersRes.status}`
+          );
+        }
+        const usersData = await usersRes.json();
+        setUsers(usersData);
+      } catch (err) {
+        console.error("Error fetching initial data:", err);
+        setFetchError(err.message || "Network error during initial fetch.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []); // Empty dependency array so this runs once on mount
 
   // --- API Functions ---
 
@@ -128,23 +165,6 @@ export function UserTable() {
   // --- Render Logic ---
 
   const currentError = fetchError || actionError;
-
-  // if (currentError) {
-  //   return (
-  //     <div className="p-4 rounded-md text-red-700 bg-red-100 border border-red-400">
-  //       <h2 className="font-bold text-lg">⚠️ Error</h2>
-  //       <p>**{currentError}**</p>
-  //       <Button
-  //         onClick={fetchUsers}
-  //         className="mt-3 bg-red-600 hover:bg-red-700 text-white"
-  //       >
-  //         Try Again
-  //       </Button>
-  //     </div>
-  //   );
-  // }
-
-  // Parse status code and message
   let statusCode;
   let errorMessage = "An unexpected error occurred.";
 
@@ -250,39 +270,41 @@ export function UserTable() {
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.username} className="border-b">
-              <td className="p-3">{user.username}</td>
-              <td className="p-3 capitalize">{user.role}</td>
-              <td className="p-3">
-                <div className="flex flex-col md:flex-row gap-3 items-center">
-                  {/* Role Change Buttons */}
-                  {user.role === "admin" ? (
-                    <Button
-                      onClick={() => openRoleUpdateDialog(user, "user")}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                    >
-                      Downgrade to User
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => openRoleUpdateDialog(user, "admin")}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Upgrade to Admin
-                    </Button>
-                  )}
+          {users
+            .filter((user) => user.username !== currentUserEmail)
+            .map((user) => (
+              <tr key={user.username} className="border-b">
+                <td className="p-3">{user.username}</td>
+                <td className="p-3 capitalize">{user.role}</td>
+                <td className="p-3">
+                  <div className="flex flex-col md:flex-row gap-3 items-center">
+                    {/* Role Change Buttons */}
+                    {user.role === "admin" ? (
+                      <Button
+                        onClick={() => openRoleUpdateDialog(user, "user")}
+                        className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                      >
+                        Downgrade to User
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => openRoleUpdateDialog(user, "admin")}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        Upgrade to Admin
+                      </Button>
+                    )}
 
-                  <Button
-                    onClick={() => openDeleteDialog(user)}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                    <Button
+                      onClick={() => openDeleteDialog(user)}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
 

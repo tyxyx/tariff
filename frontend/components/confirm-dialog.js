@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { colors } from "@/styles/colors";
 
-// Accept two new props: confirmText and confirmColor
 export function ConfirmDialog({
   title,
   message,

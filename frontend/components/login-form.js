@@ -47,12 +47,11 @@ export function LoginForm({ className = "" }) {
       }
 
       setSuccess(data.message || "Login successful!");
-      localStorage.setItem("userEmail", email);
 
       if (data.token) {
         Cookies.set("auth_token", data.token, {
           expires: 3,
-          secure: false, // todo : !!!! Enable if deployed on https
+          secure: false, // Enable if deployed on https
           // httpOnly: true,
           sameSite: "Strict",
         });
