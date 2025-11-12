@@ -1,56 +1,41 @@
-# name: Scrapper
-# on:
-#   push:
-#     branches:
-#       # - main
-#       - backend-scrapper
+name: Scrapper
+on:
+  push:
+    branches:
+      # - main
+      - backend-scrapper
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-#     steps:
-#     # Step 1: Checkout the repository
-#     - name: Checkout code
-#       uses: actions/checkout@v3
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-#     # Step 2: Set up Python
-#     - name: Set up Python
-#       uses: actions/setup-python@v4
-#       with:
-#         python-version: '3.12' # Match your Lambda runtime version
+    # Step 2: Set up SSH with PEM key
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SCRAPPER_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/scrapper.pem
+        chmod 400 ~/.ssh/scrapper.pem
+        ssh-keyscan -H ${{ secrets.SCRAPPER_EC2_HOST }} >> ~/.ssh/known_hosts
 
-#     # Step 3: Install dependencies
-#     - name: Install dependencies
-#       working-directory: scrapper
-#       run: |
-#         python -m venv venv
-#         source venv/bin/activate
-#         pip install -r requirements.txt
-#         deactivate
+    # Step 3: Copy files to EC2
+    - name: Copy files to EC2
+      run: |
+        scp -i ~/.ssh/scrapper.pem \
+          scrapper/requirements.txt \
+          scrapper/scrapper.py \
+          ${{ secrets.SCRAPPER_EC2_USER }}@${{ secrets.SCRAPPER_EC2_HOST }}:${{ secrets.SCRAPPER_EC2_DEPLOY_PATH }}
 
-#     # Step 4: Package the Lambda function
-#     - name: Package Lambda function
-#       working-directory: scrapper
-#       run: |
-#         mkdir package
-#         cp main.py package/
-#         cp -r venv/lib/python3.12/site-packages/* package/
-#         cd package
-#         zip -r ../lambda_function.zip .
-
-#     # Step 5: Configure AWS credentials
-#     - name: Configure AWS credentials
-#       uses: aws-actions/configure-aws-credentials@v3
-#       with:
-#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#         aws-region: ap-southeast-1 # Replace with your AWS region
-
-#     # Step 6: Deploy to AWS Lambda
-#     - name: Deploy to AWS Lambda
-#       working-directory: scrapper
-#       run: |
-#         aws lambda update-function-code \
-#           --function-name scrapper \
-#           --zip-file fileb://lambda_function.zip
+    # Step 4: SSH into EC2 and install/restart (optional)
+    - name: Install dependencies and restart service
+      run: |
+        ssh -i ~/.ssh/scrapper.pem ${{ secrets.SCRAPPER_EC2_USER }}@${{ secrets.SCRAPPER_EC2_HOST }} << 'EOF'
+          cd ${{ secrets.SCRAPPER_EC2_DEPLOY_PATH }}
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          deactivate
+        EOF
