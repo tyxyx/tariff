@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import { Button } from "@/components/ui/button";
 import { Calculator, User, ShieldCheck } from "lucide-react";
 import { colors } from "@/styles/colors";

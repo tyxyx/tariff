@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import com.tariff.backend.dto.ParticularTariffDTO;
 import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.exception.NotFoundException;
+import com.tariff.backend.model.Country;
 import com.tariff.backend.model.Product;
 import com.tariff.backend.model.Tariff;
 import com.tariff.backend.repository.CountryRepository;
@@ -212,4 +214,27 @@ public class TariffService {
 
     return tar.get();
   }
+
+  // 6. get valid dest countries for a product and origin country
+  public List<Country> getValidDestCountriesForProductAndOrigin(String originCountryCode, String productName) {
+    LocalDate today = LocalDate.now();
+
+    // Fetch tariffs for origin country and product name
+    List<Tariff> foundTariffs = this.tariffs.getTariffsByOriginCountryCodeAndProduct(originCountryCode, productName);
+
+    return foundTariffs.stream()
+        // not expired: expiryDate is null or expiryDate >= today
+        .filter(t -> t.getExpiryDate() == null || !t.getExpiryDate().isBefore(today))
+        // valid rates: at least one of adValoremRate or specificRate is non-zero
+        .filter(t -> {
+          Double ad = t.getAdValoremRate();
+          Double sp = t.getSpecificRate();
+          boolean adNonZero = ad != null && ad.doubleValue() != 0.0;
+          boolean spNonZero = sp != null && sp.doubleValue() != 0.0;
+          return adNonZero || spNonZero;
+        })
+        .map(Tariff::getDestCountry)
+        .distinct()
+        .collect(Collectors.toList());
+}
 }
