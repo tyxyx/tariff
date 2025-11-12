@@ -33,6 +33,7 @@ public class User implements UserDetails{
 
   @Column(nullable = false)
   @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+  @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
   private String password; // This will store the hashed password
 
   @Enumerated(EnumType.STRING)

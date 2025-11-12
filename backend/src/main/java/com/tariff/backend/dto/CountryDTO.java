@@ -28,4 +28,10 @@ public class CountryDTO {
   public void setName(String name) {
     this.name = name;
   }
+
+  // Convenience constructor used by controller/service mapping
+  public CountryDTO(String code, String name) {
+    this.code = code;
+    this.name = name;
+  }
 }
