@@ -21,8 +21,6 @@ export default function CalculatorPage() {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(1000);
   const [calculationDate, setCalculationDate] = useState("");
-  const [dateError, setDateError] = useState("");
-  const [activeTab, setActiveTab] = useState("calculator");
 
   // Fetch countries and products on page load
   useEffect(() => {
