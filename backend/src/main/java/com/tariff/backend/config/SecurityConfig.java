@@ -82,7 +82,19 @@ public class SecurityConfig {
             "/swagger-ui.html"
           ).permitAll()
 
+<<<<<<< HEAD
           // Forbid all other requests by default
+=======
+          // 4. ADMIN and SUPER_ADMIN Rules
+          .requestMatchers(HttpMethod.GET, "/api/users/").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can view all"
+          .requestMatchers(HttpMethod.PUT, "/api/users/upgrade-role").hasAnyRole("ADMIN", "SUPER_ADMIN") // Plan: "admin can upgrade user"
+
+          // No specific delete for super-admin; it's covered by the ADMIN/SUPER_ADMIN rule below.
+          // The service layer will check if they are deleting an admin.
+          .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+          // 5. Deny all other requests by default (unless authenticated)
+>>>>>>> e55f64a (added blockers and allow admin to add user)
           .anyRequest().authenticated()
       );
 
