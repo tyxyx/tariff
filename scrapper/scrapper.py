@@ -16,14 +16,14 @@ import time
 import uuid
 import math
 import random
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Any, Tuple
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# DB config env names (as you specified)
+# DB config env names
 DB_HOST = os.getenv("RDS_ENDPOINT", "mypostgreslink")
 DB_PORT = os.getenv("RDS_PORT", "5432")
 DB_USER = os.getenv("RDS_USERNAME", "postgres")
@@ -55,19 +55,70 @@ WITS_TARIFF_URL_TEMPLATE = (
 )
 
 # SQL statements (lowercase table names, snake_case columns)
+CREATE_TEMP_TABLE_SQL = """
+CREATE TEMP TABLE incoming_tariffs (
+    temp_id UUID,
+    origin_country_code TEXT,
+    dest_country_code TEXT,
+    effective_date DATE,
+    expiry_date DATE,
+    ad_valorem_rate NUMERIC,
+    specific_rate NUMERIC,
+    min_quantity INTEGER,
+    max_quantity INTEGER,
+    user_defined BOOLEAN,
+    enabled BOOLEAN,
+    hts_code TEXT
+) ON COMMIT DROP
+"""
+
+INSERT_TEMP_TABLE_SQL = """
+INSERT INTO incoming_tariffs VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+"""
+
+SELECT_EXISTING_SQL="""
+SELECT 
+    i.temp_id,
+    t.id as existing_id,
+    t.ad_valorem_rate as existing_ad_valorem,
+    t.specific_rate as existing_specific,
+    i.ad_valorem_rate as new_ad_valorem,
+    i.specific_rate as new_specific
+FROM incoming_tariffs i
+INNER JOIN tariff t 
+    ON t.origin_country_code = i.origin_country_code
+    AND t.dest_country_code = i.dest_country_code
+    AND t.effective_date = i.effective_date
+    AND COALESCE(t.expiry_date, '9999-12-31'::date) = COALESCE(i.expiry_date, '9999-12-31'::date)
+INNER JOIN tariff_product tp 
+    ON tp.tariff_id = t.id 
+    AND tp.hts_code = i.hts_code
+"""
+
+UPDATE_EXISTING_SQL="""
+UPDATE tariff t
+SET ad_valorem_rate = i.ad_valorem_rate,
+    specific_rate = i.specific_rate,
+    min_quantity = i.min_quantity,
+    max_quantity = i.max_quantity,
+    user_defined = i.user_defined
+FROM incoming_tariffs i
+INNER JOIN tariff_product tp ON tp.hts_code = i.hts_code
+WHERE t.id = tp.tariff_id
+    AND t.origin_country_code = i.origin_country_code
+    AND t.dest_country_code = i.dest_country_code
+    AND t.effective_date = i.effective_date
+    AND COALESCE(t.expiry_date, '9999-12-31'::date) = COALESCE(i.expiry_date, '9999-12-31'::date)
+    AND t.id = ANY($1::uuid[])
+"""
+
 TARIFF_INSERT_SQL = """
 INSERT INTO tariff(
     id, origin_country_code, dest_country_code, effective_date, expiry_date,
-    ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined
+    ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined, enabled
 )
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-ON CONFLICT (id) DO UPDATE SET
-    ad_valorem_rate = EXCLUDED.ad_valorem_rate,
-    specific_rate = EXCLUDED.specific_rate,
-    min_quantity = EXCLUDED.min_quantity,
-    max_quantity = EXCLUDED.max_quantity,
-    user_defined = EXCLUDED.user_defined
-RETURNING id;
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, $11)
+RETURNING id
 """
 
 TARIFF_PRODUCT_INSERT_SQL = """
@@ -75,6 +126,7 @@ INSERT INTO tariff_product(tariff_id, hts_code)
 VALUES ($1, $2)
 ON CONFLICT (tariff_id, hts_code) DO NOTHING;
 """
+
 
 # Helper: XML parsing functions (adapted from your original impl)
 def extract_country_codes_and_names(xml_content: bytes) -> Dict[str, str]:
@@ -145,7 +197,8 @@ def parse_tariff_from_content(xml_content: bytes, origin_country: str, destinati
                 "specific_rate": 0.0,
                 "min_quantity": 0,
                 "max_quantity": 0,
-                "user_defined": False
+                "user_defined": False,
+                "enabled": True
             }
             records_by_product[product_code].append(rec)
     return records_by_product
@@ -222,21 +275,7 @@ async def flush_batches(pool: asyncpg.pool.Pool, tariff_rows: List[Tuple], produ
     async with pool.acquire() as conn:
         async with conn.transaction():
             # Create temp table with incoming data
-            await conn.execute("""
-                CREATE TEMP TABLE incoming_tariffs (
-                    temp_id UUID,
-                    origin_country_code TEXT,
-                    dest_country_code TEXT,
-                    effective_date DATE,
-                    expiry_date DATE,
-                    ad_valorem_rate NUMERIC,
-                    specific_rate NUMERIC,
-                    min_quantity INTEGER,
-                    max_quantity INTEGER,
-                    user_defined BOOLEAN,
-                    hts_code TEXT
-                ) ON COMMIT DROP
-            """)
+            await conn.execute(CREATE_TEMP_TABLE_SQL)
             
             # Bulk insert into temp table
             temp_rows = []
@@ -246,29 +285,10 @@ async def flush_batches(pool: asyncpg.pool.Pool, tariff_rows: List[Tuple], produ
                 if hts_code:
                     temp_rows.append((*row, hts_code))
             
-            await conn.executemany("""
-                INSERT INTO incoming_tariffs VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-            """, temp_rows)
+            await conn.executemany(INSERT_TEMP_TABLE_SQL, temp_rows)
             
             # Find existing matches with a single JOIN
-            existing = await conn.fetch("""
-                SELECT 
-                    i.temp_id,
-                    t.id as existing_id,
-                    t.ad_valorem_rate as existing_ad_valorem,
-                    t.specific_rate as existing_specific,
-                    i.ad_valorem_rate as new_ad_valorem,
-                    i.specific_rate as new_specific
-                FROM incoming_tariffs i
-                INNER JOIN tariff t 
-                    ON t.origin_country_code = i.origin_country_code
-                    AND t.dest_country_code = i.dest_country_code
-                    AND t.effective_date = i.effective_date
-                    AND COALESCE(t.expiry_date, '9999-12-31'::date) = COALESCE(i.expiry_date, '9999-12-31'::date)
-                INNER JOIN tariff_product tp 
-                    ON tp.tariff_id = t.id 
-                    AND tp.hts_code = i.hts_code
-            """)
+            existing = await conn.fetch(SELECT_EXISTING_SQL)
             
             # Determine what needs updating
             to_update = []
@@ -281,22 +301,7 @@ async def flush_batches(pool: asyncpg.pool.Pool, tariff_rows: List[Tuple], produ
             
             # Update existing
             if to_update:
-                await conn.execute("""
-                    UPDATE tariff t
-                    SET ad_valorem_rate = i.ad_valorem_rate,
-                        specific_rate = i.specific_rate,
-                        min_quantity = i.min_quantity,
-                        max_quantity = i.max_quantity,
-                        user_defined = i.user_defined
-                    FROM incoming_tariffs i
-                    INNER JOIN tariff_product tp ON tp.hts_code = i.hts_code
-                    WHERE t.id = tp.tariff_id
-                        AND t.origin_country_code = i.origin_country_code
-                        AND t.dest_country_code = i.dest_country_code
-                        AND t.effective_date = i.effective_date
-                        AND COALESCE(t.expiry_date, '9999-12-31'::date) = COALESCE(i.expiry_date, '9999-12-31'::date)
-                        AND t.id = ANY($1::uuid[])
-                """, to_update)
+                await conn.execute(UPDATE_EXISTING_SQL, to_update)
                 print(f"  Updated {len(to_update)} existing tariffs")
             
             # Insert new records (those not in existing_temp_ids)
@@ -304,23 +309,13 @@ async def flush_batches(pool: asyncpg.pool.Pool, tariff_rows: List[Tuple], produ
             if new_tariffs:
                 id_mapping = {}
                 for row in new_tariffs:
-                    result = await conn.fetch("""
-                        INSERT INTO tariff(
-                            id, origin_country_code, dest_country_code, effective_date, expiry_date,
-                            ad_valorem_rate, specific_rate, min_quantity, max_quantity, user_defined
-                        )
-                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-                        RETURNING id
-                    """, *row[:10])
+                    result = await conn.fetch(TARIFF_INSERT_SQL, *row[:11])
                     id_mapping[row[0]] = str(result[0]["id"])
                 
                 # Insert product links
-                product_rows = [(id_mapping[row[0]], row[10]) for row in new_tariffs if row[0] in id_mapping]
+                product_rows = [(id_mapping[row[0]], row[11]) for row in new_tariffs if row[0] in id_mapping]
                 if product_rows:
-                    await conn.executemany("""
-                        INSERT INTO tariff_product(tariff_id, hts_code)
-                        VALUES ($1, $2)
-                    """, product_rows)
+                    await conn.executemany(TARIFF_PRODUCT_INSERT_SQL, product_rows)
                 
                 print(f"  Inserted {len(new_tariffs)} new tariffs")
 
@@ -381,7 +376,8 @@ async def run_scrape():
                             rec["specific_rate"],
                             rec["min_quantity"],
                             rec["max_quantity"],
-                            rec["user_defined"]
+                            rec["user_defined"],
+                            rec["enabled"],
                         )
                         pair_tariff_rows.append(tariff_row)
                         pair_product_links[rec["id"]] = product_code
@@ -429,7 +425,9 @@ async def run_scrape():
 
 # Entrypoint
 def main():
-    print("Starting scraper (async)...")
+    print("=" * 40)
+    readable_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Format: YYYY-MM-DD HH:MM:SS
+    print(f"Starting scraper (async) at {readable_time}...")
     asyncio.run(run_scrape())
 
 if __name__ == "__main__":
