@@ -70,7 +70,7 @@ resource "aws_instance" "scrapper" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = file(var.private_key_path) # Path to your private key
+      private_key = file(var.private_key_path)
       host        = self.public_ip
     }
   }
@@ -101,7 +101,7 @@ resource "aws_instance" "scrapper" {
   provisioner "remote-exec" {
   inline = [
     "sudo apt-get update -y",
-    "sudo apt-get install -y python3.12 python3.12-venv python3-pip",  # Use python3-pip instead
+    "sudo apt-get install -y python3.12 python3.12-venv python3-pip",
     "chmod +x /home/ubuntu/scrapper.py",
     "python3.12 -m venv /home/ubuntu/.venv",  # Create venv with python3.12
     "chmod +x /home/ubuntu/.venv/bin/activate",
@@ -118,7 +118,7 @@ resource "aws_instance" "scrapper" {
     
     "chmod +x /home/ubuntu/run_scrapper.sh",
     
-    # Add cron job (runs every Sunday at 2 AM)
+    # Add cron job
     "(crontab -l 2>/dev/null; echo '${var.cron_schedule} /home/ubuntu/run_scrapper.sh') | crontab -",
   ]
   connection {
