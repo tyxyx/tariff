@@ -322,7 +322,8 @@ export default function HeatmapPage() {
       };
     });
 
-    const payload = {
+    // Build payloads for create vs update. Backend update expects nested country objects and full product objects.
+    const createPayload = {
       originCountry: countryCodeForName(formState.origin) || formState.origin,
       destCountry: countryCodeForName(formState.dest) || formState.dest,
       effectiveDate: eff || null,
@@ -335,6 +336,46 @@ export default function HeatmapPage() {
       products: productsPayload,
     };
 
+    // For updates, construct object with nested country objects and richer product/user objects
+    const resolveCountryObj = (val, existing) => {
+      // val may be a display name or code; existing may be an object from the fetched tariff
+      let code = countryCodeForName(val) || val;
+      // if still falsy, try existing object's code/name
+      if (!code && existing) code = existing.code || existing;
+      const name = (countriesList || []).find((c) => String(c.code) === String(code))?.name || (typeof existing === "object" ? existing?.name : val) || String(code || "");
+      return { code: String(code || ""), name };
+    };
+
+    const arbitraryMin = 1; // arbitrary numbers as requested
+    const arbitraryMax = 9007199254740991; // JS MAX_SAFE_INTEGER-ish large number
+
+    const updatePayload = {
+      id: editingTariff?.id,
+      effectiveDate: eff || editingTariff?.effectiveDate || null,
+      expiryDate: exp || editingTariff?.expiryDate || null,
+      // keep adValoremRate key for update (backend expects adValoremRate on Tariff update path)
+      adValoremRate: rateVal != null ? rateVal : editingTariff?.adValoremRate ?? null,
+      specificRate: specificNum === null ? (editingTariff?.specificRate ?? 0) : specificNum,
+      minQuantity: editingTariff?.minQuantity ?? arbitraryMin,
+      maxQuantity: editingTariff?.maxQuantity ?? arbitraryMax,
+      userDefined: editingTariff?.userDefined ?? true,
+      originCountry: resolveCountryObj(formState.origin, editingTariff?.originCountry),
+      destCountry: resolveCountryObj(formState.dest, editingTariff?.destCountry),
+      products: (selectedProducts || []).map((code) => {
+        const found = (productOptions || []).find((p) => (p.code && p.code === code) || (p.name && p.name === code));
+        return {
+          name: found?.name ?? code,
+          description: found?.description ?? "Admin added",
+          enabled: found?.enabled ?? true,
+          hts_code: found?.code ?? code,
+        };
+      }),
+      users: (editingTariff?.users || []).map((u) => ({
+        email: u?.email || "",
+        role: u?.role || "",
+      })),
+    };
+
     try {
       // debug: log whether we're creating or updating and show payload
       // (kept as console.debug so it doesn't clutter production logs)
@@ -344,18 +385,19 @@ export default function HeatmapPage() {
       const base = `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`;
       let res;
       if (editingTariff && editingTariff.id) {
+        console.debug("submitForm: updating (PUT)", updatePayload);
         res = await fetch(`${base}/${editingTariff.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(updatePayload),
         });
       } else {
-        console.debug("submitForm: creating (POST)", payload);
-        console.debug("submitForm: payload JSON", JSON.stringify(payload));
+        console.debug("submitForm: creating (POST)", createPayload);
+        console.debug("submitForm: payload JSON", JSON.stringify(createPayload));
         res = await fetch(base, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(createPayload),
         });
         console.debug("submitForm: POST request sent to", base);
       }
