@@ -1,3 +1,4 @@
+**Total Coverage:**
 [![codecov](https://codecov.io/github/tyxyx/tariff/graph/badge.svg?token=6XH81GKBNP)](https://codecov.io/github/tyxyx/tariff)
 
 **Backend Coverage:** 
