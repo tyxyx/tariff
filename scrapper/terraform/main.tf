@@ -112,7 +112,8 @@ resource "aws_instance" "scrapper" {
     "cat > /home/ubuntu/run_scrapper.sh << 'EOF'",
     "#!/bin/bash",
     "cd /home/ubuntu",
-    "python3 /home/ubuntu/scrapper.py",
+    "source /home/ubuntu/.venv/bin/activate",
+    "python3 /home/ubuntu/scrapper.py >> /home/ubuntu/scrapper.log 2>&1",
     "EOF",
     
     "chmod +x /home/ubuntu/run_scrapper.sh",
