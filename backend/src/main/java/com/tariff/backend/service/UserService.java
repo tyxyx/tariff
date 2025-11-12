@@ -1,30 +1,44 @@
 package com.tariff.backend.service;
 
+import com.tariff.backend.dto.UserRequestDTO;
+import com.tariff.backend.exception.InvalidCredentialsException;
+import com.tariff.backend.exception.UserAlreadyExistsException;
+import com.tariff.backend.model.User;
+import com.tariff.backend.repository.UserRepository;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.tariff.backend.dto.UserRequestDTO;
-import com.tariff.backend.exception.InvalidCredentialsException;
-import com.tariff.backend.exception.UserAlreadyExistsException;
-import com.tariff.backend.exception.UserNotFoundException;
-import com.tariff.backend.model.User;
-import com.tariff.backend.repository.UserRepository;
-
-
-
 @Service
 public class UserService {
+
   private final UserRepository userRepository;
   private final BCryptPasswordEncoder passwordEncoder;
+  private final AuthenticationManager authenticationManager;
 
-  public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
+  @Value("${security.password.min-length:8}") // Default to 8 if property is missing
+  private int minPwdLength;
+
+    @Value("${security.password.max-length:16}") // Default to 16 if property is missing
+    private int maxPwdLength;
+
+  public UserService(
+    UserRepository userRepository,
+    BCryptPasswordEncoder passwordEncoder,
+    AuthenticationManager authenticationManager
+  ) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
+    this.authenticationManager = authenticationManager;
   }
 
+  // Helper Functions
   public List<User> listUsers() {
     return userRepository.findAll();
   }
@@ -35,49 +49,114 @@ public class UserService {
 
   private void checkPasswordMatch(String rawPassword, String storedPassword) {
     if (!passwordEncoder.matches(rawPassword, storedPassword)) {
-        throw new InvalidCredentialsException("Invalid password. Please try again.");
+      throw new InvalidCredentialsException(
+        "Invalid password. Please try again."
+      );
     }
   }
 
+  private User findUserByEmailOrThrow(String email) {
+      // Check if user already exists
+      return userRepository.findByEmail(email)
+              .orElseThrow(() -> new UsernameNotFoundException(
+                      "User not found with email: " + email
+              ));
+  }
 
+  // Service Layer stuffs
+  // todo make password minimum length dynamic - OK, can change at application.properties
+  // allow admin to change this implementation - this required to be store in db, sounds like a pain
   private void checkPasswordStrength(String password) {
-    if (!(password.length() >= 8 && password.matches(".*[A-Z].*") && password.matches(".*\\d.*"))) {
-      throw new IllegalArgumentException("Password must be at least 8 characters long, contain an uppercase letter and a number.");
+    if (
+      !(password.length() >= minPwdLength &&
+        password.length() <= maxPwdLength &&
+        password.matches(".*[A-Z].*") &&
+        password.matches(".*\\d.*"))
+    ) {
+      throw new IllegalArgumentException(
+              String.format(
+                      "Password must be between %d and %d characters long, contain at least one uppercase letter, and include at least one number.",
+                      minPwdLength, maxPwdLength
+              )
+      );
     }
   }
 
   public User addUser(UserRequestDTO.AddUserDto addUserDto) {
-        userRepository.findByEmail(addUserDto.email()).ifPresent(user -> {
-            throw new UserAlreadyExistsException("A user with this email already exists.");
-        });
+    userRepository
+      .findByEmail(addUserDto.email())
+      .ifPresent(user -> {
+        throw new UserAlreadyExistsException(
+          "A user with this email already exists."
+        );
+      });
 
-        checkPasswordStrength(addUserDto.password());
-        User newUser = new User(addUserDto.email(), hashPassword(addUserDto.password()));
-        return userRepository.save(newUser);
-    }
-  
+    checkPasswordStrength(addUserDto.password());
+    User newUser = new User(
+      addUserDto.email(),
+      hashPassword(addUserDto.password()),
+            null
+    );
+    return userRepository.save(newUser);
+  }
+
   @Transactional(rollbackFor = Exception.class)
   public User loginUser(UserRequestDTO.LoginDto loginDto) {
-    // Check if user already exists
-    User user = this.userRepository.findByEmail(loginDto.email()).orElseThrow(() -> {
-      return new UserNotFoundException("We couldn't find an account with that email. Please check your details.");}
+    User user = findUserByEmailOrThrow(loginDto.email());
+
+    // Decode password to check if ok
+    checkPasswordMatch(loginDto.password(), user.getPassword());
+
+    // Authenticate Manager
+    authenticationManager.authenticate(
+      new UsernamePasswordAuthenticationToken(
+        loginDto.email(),
+        loginDto.password()
+      )
     );
 
-    checkPasswordMatch(loginDto.password(), user.getPassword());
     return user;
   }
-  
-  public User updatePassword(UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
-    // Check if user already exists
-    User user = this.userRepository.findByEmail(updatePasswordDto.email()).orElseThrow(() -> {
-      return new UserNotFoundException("User not found with email: " + updatePasswordDto.email());}
-    );
+
+  // todo fix weird bug
+  // if jwt token is incorrect (like idk someone stole another user jwt and tried to login as a admin),
+  // it will return 200 without updating the password in db, idkkkkkkkk
+  public User updatePassword(String authenticatedEmail, UserRequestDTO.UpdatePasswordDto updatePasswordDto) {
+    User user = findUserByEmailOrThrow(authenticatedEmail);
 
     checkPasswordMatch(updatePasswordDto.password(), user.getPassword());
     checkPasswordStrength(updatePasswordDto.newPassword());
 
     user.setPassword(hashPassword(updatePasswordDto.newPassword()));
-    return this.userRepository.save(user);
+    return userRepository.save(user);
   }
 
-} 
+  // public User updateEmail(UserRequestDTO.UpdateEmailDto updateEmailDto) {
+  //   User user = findUserByEmailOrThrow(updateEmailDto.email());
+
+  //   if (updateEmailDto.email().equals(updateEmailDto.newEmail())) {
+  //     throw new InvalidCredentialsException("New email must be different from the current email");
+  //   };
+
+  //   user.setEmail(updateEmailDto.newEmail());
+  //   return userRepository.save(user);
+  // }
+
+  public User deleteUser(UserRequestDTO.DeleteUserDto deleteUserDto) {
+      User user = findUserByEmailOrThrow(deleteUserDto.email());
+      userRepository.delete(user);
+      return user;
+  }
+
+  public User upgradeRole(UserRequestDTO.UpdateUserRoleDto updateUserRoleDto) {
+      User user = findUserByEmailOrThrow(updateUserRoleDto.email());
+      user.upgradeRole();
+      return userRepository.save(user);
+  }
+
+    public User downgradeRole(UserRequestDTO.UpdateUserRoleDto updateUserRoleDto) {
+        User user = findUserByEmailOrThrow(updateUserRoleDto.email());
+        user.downgradeRole();
+        return userRepository.save(user);
+    }
+}

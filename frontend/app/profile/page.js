@@ -1,14 +1,11 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { colors } from "@/styles/colors";
 import React, { useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
+import { apiFetch } from "@/utils/apiClient";
 
 export default function DashboardPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -16,15 +13,6 @@ export default function DashboardPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  // Password validation function
-  const isPasswordValid = (password) => {
-    return (
-      password.length >= 8 &&
-      /[A-Z]/.test(password) &&
-      /\d/.test(password)
-    );
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,31 +23,25 @@ export default function DashboardPage() {
       setError("New password and confirmation do not match.");
       return;
     }
-    if (!isPasswordValid(newPassword)) {
+
+    if (currentPassword === newPassword) {
       setError(
-        "New password must be at least 8 characters, contain an uppercase letter and a number."
+        "The new password cannot be the same as the current password. Please choose a different password."
       );
       return;
     }
 
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      setError("User not logged in.");
-      return;
-    }
-
     try {
-      const response = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/change-password`, {
-        method: "PUT", 
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password: currentPassword,
-          newPassword,
-        }),
-      });
+      const response = await apiFetch(
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/change-password`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            password: currentPassword,
+            newPassword: newPassword,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -130,7 +112,9 @@ export default function DashboardPage() {
                     <p style={{ color: "red", marginBottom: 12 }}>{error}</p>
                   )}
                   {success && (
-                    <p style={{ color: "green", marginBottom: 12 }}>{success}</p>
+                    <p style={{ color: "green", marginBottom: 12 }}>
+                      {success}
+                    </p>
                   )}
                 </div>
                 <Button
@@ -139,7 +123,6 @@ export default function DashboardPage() {
                     !currentPassword ||
                     !newPassword ||
                     !confirmPassword ||
-                    !isPasswordValid(newPassword) ||
                     newPassword !== confirmPassword
                   }
                 >
