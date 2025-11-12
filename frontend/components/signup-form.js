@@ -33,7 +33,7 @@ export function SignupForm({ isAdmin = false, onSuccess }) {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/register`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/register`,
         {
           method: "POST",
           headers: {
@@ -63,7 +63,7 @@ export function SignupForm({ isAdmin = false, onSuccess }) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const login_response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/login`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/login`,
         {
           method: "POST",
           headers: {

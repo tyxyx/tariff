@@ -14,7 +14,9 @@ export default function PageHeader() {
     data: user,
     loading,
     error,
-  } = useApiData(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`);
+  } = useApiData(
+    `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -57,7 +59,7 @@ export default function PageHeader() {
     );
   }
 
-  const username = user.email.split("@")[0];
+  const username = user.email.split("@")[0].replace(/\./g, " ");
 
   return (
     <header style={{ backgroundColor: colors.card, color: colors.text }}>

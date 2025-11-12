@@ -62,10 +62,17 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll() // Assuming this is for registration
           .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll() // Assuming you have a login endpoint
           .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+          .requestMatchers(HttpMethod.GET, "/health").permitAll() // for healthchecks
+
+          // OTHER ENDPOINTS
+          .requestMatchers("/api/tariffs/**").permitAll()
+          .requestMatchers("/api/products/**").permitAll()
+          .requestMatchers("/api/countries/**").permitAll()
+          .requestMatchers(HttpMethod.POST, "/api/predict").permitAll()
 
           // 2. User "Self-Service" Rules (Authenticated)
           // Placed *before* Admin rules to be matched first
-          .requestMatchers(HttpMethod.PUT, "/api/users/me/password").authenticated() // For changing *own* password
+          .requestMatchers(HttpMethod.PUT, "/api/users/me/change-password").authenticated() // For changing *own* password
           .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated() // For getting *own* profile
 
           // 3. SUPER_ADMIN Rules (Most specific roles first)
@@ -81,6 +88,7 @@ public class SecurityConfig {
 
           // 5. Deny all other requests by default (unless authenticated)
           .anyRequest().authenticated()
+          
   );
 
     return http.build();

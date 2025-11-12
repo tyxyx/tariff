@@ -33,7 +33,7 @@ export default function DashboardPage() {
 
     try {
       const response = await apiFetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/change-password`,
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/change-password`,
         {
           method: "PUT",
           body: JSON.stringify({
