@@ -24,11 +24,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # DB config env names (as you specified)
-DB_HOST = os.getenv("LOCAL_ENDPOINT", "mypostgreslink")
-DB_PORT = os.getenv("LOCAL_PORT", "5432")
-DB_USER = os.getenv("LOCAL_USERNAME", "postgres")
-DB_PASSWORD = os.getenv("LOCAL_PASSWORD", "postgrespw")
-DB_NAME = os.getenv("LOCAL_DBNAME", "postgres")
+DB_HOST = os.getenv("RDS_ENDPOINT", "mypostgreslink")
+DB_PORT = os.getenv("RDS_PORT", "5432")
+DB_USER = os.getenv("RDS_USERNAME", "postgres")
+DB_PASSWORD = os.getenv("RDS_PASSWORD", "postgrespw")
+DB_NAME = os.getenv("RDS_DBNAME", "postgres")
 
 # Scraper config
 CONCURRENCY = int(os.getenv("CONCURRENCY", "50"))   # you chose 50
