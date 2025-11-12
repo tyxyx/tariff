@@ -1,11 +1,9 @@
 "use client";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { colors } from "@/styles/colors";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calculator } from "lucide-react";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -23,6 +21,7 @@ export default function CalculatorPage() {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(1000);
   const [calculationDate, setCalculationDate] = useState("");
+  const [dateError, setDateError] = useState("");
   const [activeTab, setActiveTab] = useState("calculator");
 
   // Fetch countries and products on page load
@@ -100,24 +99,7 @@ export default function CalculatorPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Tabs */}
-            <div className="mb-4 flex border-b border-gray-700">
-              <button
-                className={`px-4 py-2 focus:outline-none ${activeTab === "calculator" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-400"}`}
-                onClick={() => setActiveTab("calculator")}
-              >
-                Calculator
-              </button>
-              <button
-                className={`px-4 py-2 focus:outline-none ${activeTab === "predict" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-400"}`}
-                onClick={() => setActiveTab("predict")}
-              >
-                Predict
-              </button>
-            </div>
-            {/* Tab Content */}
-            {activeTab === "calculator" && (
-              <form className="space-y-4">
+            <form className="space-y-4">
                 {/* ...existing calculator form code... */}
                 <div>
                   <label className="block mb-1 font-medium">Product Name</label>
@@ -227,23 +209,7 @@ export default function CalculatorPage() {
                   />
                 </div>
               </form>
-            )}
-            {activeTab === "predict" && (
-              <div className="space-y-4">
-                <label className="block mb-1 font-medium">Upload News Article (PDF)</label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
-                />
-                <Button className="w-full" type="button" disabled>
-                  Predict Tariff Changes
-                </Button>
-                <div className="mt-2 text-xs text-gray-400">
-                  (Feature coming soon)
-                </div>
-              </div>
-            )}
+            
           </CardContent>
         </Card>
         {/* Tariff Summary Card */}
