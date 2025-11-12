@@ -64,7 +64,7 @@ public class UserController {
     cookie.setSecure(true);    // Only sent over HTTPS (set false for local dev)
     cookie.setPath("/");       // Available for all paths
     cookie.setMaxAge(3 * 24 * 60 * 60); // 3 days in seconds
-    cookie.setAttribute("SameSite", "Strict"); // CSRF protection
+    // cookie.setAttribute("SameSite", "Strict"); // CSRF protection
     
     response.addCookie(cookie);
 
