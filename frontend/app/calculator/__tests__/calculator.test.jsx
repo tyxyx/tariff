@@ -50,6 +50,21 @@ describe('CalculatorPage', () => {
   });
 
   it('renders placeholder summary values on first load', () => {
+    // Mock fetch for countries and products
+    global.fetch = jest.fn((url) => {
+      if (url.includes('/api/countries')) {
+        return Promise.resolve({
+          json: () => Promise.resolve([{ name: 'China' }, { name: 'United States' }]),
+        });
+      }
+      if (url.includes('/api/products')) {
+        return Promise.resolve({
+          json: () => Promise.resolve([{ name: 'Laptops' }]),
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
+    });
+
     render(<CalculatorPage />);
 
     const summary = screen.getByRole('list');
@@ -57,19 +72,37 @@ describe('CalculatorPage', () => {
     expect(findSummaryItem(summary, 'Product: -')).toBeInTheDocument();
     expect(findSummaryItem(summary, 'Import Country: -')).toBeInTheDocument();
     expect(findSummaryItem(summary, 'Export Country: -')).toBeInTheDocument();
-    expect(findSummaryItem(summary, 'Tariff Rate: -')).toBeInTheDocument();
-    expect(findSummaryItem(summary, 'Tariff Amount: -')).toBeInTheDocument();
+    expect(findSummaryItem(summary, 'Calculation Date: -')).toBeInTheDocument();
   });
 
   it('fetches tariff rate and updates summary when inputs are provided', async () => {
     process.env = { ...process.env, NEXT_PUBLIC_API_URL: 'http://mock.api' };
 
-    const mockFetch = jest.fn().mockResolvedValue({
-      json: () => Promise.resolve({ tariffRate: 0.2, rate: 0.2 }),
+    const mockFetch = jest.fn((url) => {
+      if (url.includes('/api/countries')) {
+        return Promise.resolve({
+          json: () => Promise.resolve([{ name: 'China' }, { name: 'United States' }]),
+        });
+      }
+      if (url.includes('/api/products')) {
+        return Promise.resolve({
+          json: () => Promise.resolve([{ name: 'Laptops' }]),
+        });
+      }
+      if (url.includes('/api/tariffs/particular-tariff-rate')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ adValoremRate: 0.2, specificRate: 0 }),
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
     });
     global.fetch = mockFetch;
 
     render(<CalculatorPage />);
+    
+    // Wait for initial fetches to complete
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0], { target: { value: 'Laptops' } });
     fireEvent.change(selects[1], { target: { value: 'China' } });
@@ -82,9 +115,22 @@ describe('CalculatorPage', () => {
     const dateInput = screen.getByTestId('date-picker');
     fireEvent.change(dateInput, { target: { value: '2024-05-01' } });
 
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    // Wait for the tariff rate fetch (3rd call: countries, products, then tariff)
+    await waitFor(
+      () => {
+        const tariffCalls = mockFetch.mock.calls.filter(call => 
+          call[0].includes('/api/tariffs/particular-tariff-rate')
+        );
+        expect(tariffCalls.length).toBeGreaterThanOrEqual(1);
+      },
+      { timeout: 3000 }
+    );
 
-    const [url, options] = mockFetch.mock.calls[0];
+    // Find the tariff API call
+    const tariffCall = mockFetch.mock.calls.find(call => 
+      call[0].includes('/api/tariffs/particular-tariff-rate')
+    );
+    const [url, options] = tariffCall;
     expect(url).toBe(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/particular-tariff-rate`);
     expect(options).toMatchObject({
       method: 'POST',
@@ -100,10 +146,11 @@ describe('CalculatorPage', () => {
     const summary = screen.getByRole('list');
 
     await waitFor(() => {
-      expect(findSummaryItem(summary, 'Tariff Rate: 20.00%')).toBeInTheDocument();
+      expect(findSummaryItem(summary, 'Ad Valorem Rate (%): 0.2')).toBeInTheDocument();
     });
     expect(findSummaryItem(summary, 'Quantity: 10')).toBeInTheDocument();
     expect(findSummaryItem(summary, 'Unit Price: $200')).toBeInTheDocument();
-    expect(findSummaryItem(summary, 'Tariff Amount: $400')).toBeInTheDocument();
+    // Ad Valorem Duty Amount = (0.2 / 100) * (200 * 10) = 0.002 * 2000 = 4
+    expect(findSummaryItem(summary, 'Ad Valorem Duty Amount: 4')).toBeInTheDocument();
   });
 });

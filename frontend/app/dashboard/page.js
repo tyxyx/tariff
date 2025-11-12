@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calculator, Settings, Users, User, History, Map } from "lucide-react";
+import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monitor } from "lucide-react";
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
@@ -46,59 +46,37 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Calculation History */}
-          {/* <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          {/* Tariff Simulator (document-based predictions) */}
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
-              <History className="h-12 w-12 text-primary mb-4" />
-              <CardTitle>Calculation History</CardTitle>
+              <MonitorCog className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Tariff Simulator</CardTitle>
               <CardDescription>
-                View your calculation history and saved results
+                Upload policy or news PDFs to generate a country-focused tariff
+                impact report
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/history">
-                <Button variant="outline" className="w-full bg-transparent">
-                  View History
-                </Button>
+              <Link href="/simulation">
+                <Button className="w-full">Open Simulator</Button>
               </Link>
             </CardContent>
-          </Card> */}
+          </Card>
 
-          {/* Tariff Heatmap */}
-          {/* <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
-              <Map className="h-12 w-12 text-primary mb-4" />
-              <CardTitle>Tariff Heatmap</CardTitle>
+              <TextSearch className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Data</CardTitle>
               <CardDescription>
-                Visualize tariff rates across countries with interactive heatmap
+                Browse current tariff schedules and tables
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/heatmap">
-                <Button variant="outline" className="w-full bg-transparent">
-                  View Heatmap
-                </Button>
+              <Link href="/data">
+                <Button className="w-full">Open Data</Button>
               </Link>
             </CardContent>
-          </Card> */}
-
-          {/* Admin Panel - Only show for admin users */}
-          {/* {user.role === "admin" && (
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <Users className="h-12 w-12 text-primary mb-4" />
-                <CardTitle>Admin Panel</CardTitle>
-                <CardDescription>
-                  Manage tariff data, users, and system settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/admin">
-                  <Button className="w-full">Open Admin Panel</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )} */}
+          </Card>
 
           {/* Profile Settings */}
           <Card>
