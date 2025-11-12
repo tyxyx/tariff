@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,11 +10,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monitor } from "lucide-react";
+import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monitor, Server } from "lucide-react";
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
-  
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [currentUserRole, setCurrentUserRole] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchMe = async () => {
+      try {
+        const meRes = await fetch('/api/users/me');
+        if (!meRes.ok) return;
+        const meData = await meRes.json();
+        if (!mounted) return;
+        setCurrentUserEmail(meData.username);
+        setCurrentUserRole(meData.role);
+      } catch (e) {
+        // optionally handle error
+      }
+    };
+    fetchMe();
+    return () => { mounted = false };
+  }, []);
 
   return (
     <div
@@ -95,6 +117,22 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
+          {currentUserRole === 'admin' && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <Server className="h-12 w-12 text-primary mb-4" />
+                <CardTitle>Admin Panel</CardTitle>
+                <CardDescription>
+                  Manage users and administrative settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/admin">
+                  <Button className="w-full">Go to Admin</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
