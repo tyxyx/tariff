@@ -126,13 +126,13 @@ export default function DashboardPage() {
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <Server className="h-12 w-12 text-primary mb-4" />
-                <CardTitle>Admin Panel</CardTitle>
+                <CardTitle>CRUD</CardTitle>
                 <CardDescription>
                   Manage users and administrative settings
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/admin">
+                <Link href="/crud">
                   <Button className="w-full">Go to Admin</Button>
                 </Link>
               </CardContent>

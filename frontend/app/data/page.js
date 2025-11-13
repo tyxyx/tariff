@@ -270,7 +270,13 @@ export default function HeatmapPage() {
                                             <td className="pr-4 py-2">{expiryRaw ?? '-'}</td>
                                             <td className="pr-4 py-2">{t.adValoremRate ?? '-'}</td>
                                             <td className="pr-4 py-2">{t.specificRate ?? '-'}</td>
-                                            <td className="pr-4 py-2">{(t.products || []).map(p => productCodeVal(p)).slice(0,5).join(', ')}{(t.products || []).length > 5 ? '…' : ''}</td>
+                                            <td className="pr-4 py-2">{(t.products || []).slice(0,5).map(p => {
+                                                const name = p?.name ?? p?.productName ?? '';
+                                                const hts = p?.HTS_code ?? p?.hts_code ?? p?.htscode ?? p?.HTSCode ?? '';
+                                                if (name) return hts ? `${name} (${hts})` : name;
+                                                // fallback to existing productCodeVal when no explicit name
+                                                return productCodeVal(p);
+                                            }).join(', ')}{(t.products || []).length > 5 ? '…' : ''}</td>
                                         </tr>
                                     );
                                 })}
