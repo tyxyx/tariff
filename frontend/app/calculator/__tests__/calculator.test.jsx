@@ -76,7 +76,8 @@ describe('CalculatorPage', () => {
   });
 
   it('fetches tariff rate and updates summary when inputs are provided', async () => {
-    process.env = { ...process.env, NEXT_PUBLIC_API_URL: 'http://mock.api' };
+    // Use the backend host env var (the app composes the full URL using this host)
+    process.env = { ...process.env, NEXT_PUBLIC_BACKEND_EC2_HOST: 'mock.api' };
 
     const mockFetch = jest.fn((url) => {
       if (url.includes('/api/countries')) {
