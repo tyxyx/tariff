@@ -105,7 +105,7 @@ public class SecurityConfig {
     java.util.ArrayList<String> allowedOrigins = new java.util.ArrayList<>();
     if (frontendHost != null && !frontendHost.isBlank()) {
       // Expect frontendHost to include scheme and port
-      allowedOrigins.add(frontendHost);
+      allowedOrigins.add("http://" + frontendHost + ":3000");
     }
     // Always allow localhost for local development
     allowedOrigins.add("http://localhost:3000");
