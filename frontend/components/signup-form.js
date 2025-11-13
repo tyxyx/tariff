@@ -40,6 +40,7 @@ export function SignupForm({ isAdmin = false, onSuccess }) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ email, password }),
+          credentials: "include",
         }
       );
 
