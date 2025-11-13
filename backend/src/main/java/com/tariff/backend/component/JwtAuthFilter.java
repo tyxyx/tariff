@@ -1,12 +1,8 @@
 package com.tariff.backend.component;
 
-import com.tariff.backend.service.JwtService;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,10 +10,17 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
-import org.springframework.util.AntPathMatcher;
-import org.springframework.http.HttpMethod;
+
+import com.tariff.backend.service.JwtService;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 // auth middleware component
 @Component
@@ -55,6 +58,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     // This return true (meaning "do not filter") if the path matches.
     return (
       pathMatcher.match("/api/users/register", path) ||
+      // pathMatcher.match("/api/users/me", path) ||
       pathMatcher.match("/api/users/login", path) ||
       pathMatcher.match("/api/users/logout", path) ||
       pathMatcher.match("/swagger-ui/**", path) ||

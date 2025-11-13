@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monitor, Server } from "lucide-react";
+import { Calculator, Settings, Users, User, TextSearch, Map, MonitorCog, Monitor, Server, UserCog } from "lucide-react";
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
@@ -25,12 +25,13 @@ export default function DashboardPage() {
           `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
         );
         if (!meRes.ok) {
+          console.log("meRes not ok");
           console.error("Failed to fetch current user. Status:", meRes.status);
           return;
         }
         const meData = await meRes.json();
         if (!mounted) return;
-            setCurrentUserRole(meData.role);
+        setCurrentUserRole(meData.role);
 
       } catch (e) {
         console.error("Error fetching current user:", e);
@@ -126,14 +127,30 @@ export default function DashboardPage() {
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <Server className="h-12 w-12 text-primary mb-4" />
-                <CardTitle>Admin Panel</CardTitle>
+                <CardTitle>Edit Tariffs</CardTitle>
                 <CardDescription>
-                  Manage users and administrative settings
+                  CRUD functionality on tariff data
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/admin">
-                  <Button className="w-full">Go to Admin</Button>
+                <Link href="/crud">
+                  <Button className="w-full">Go to CRUD</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+          {currentUserRole === 'ADMIN' && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <UserCog className="h-12 w-12 text-primary mb-4" />
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  Manage user accounts and roles
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/user-management">
+                  <Button className="w-full">Manage Users</Button>
                 </Link>
               </CardContent>
             </Card>
