@@ -20,6 +20,11 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED=1
 
+# Accept build-time argument and export it as an environment variable
+# so Next.js can read NEXT_PUBLIC_* variables at build time.
+ARG NEXT_PUBLIC_BACKEND_EC2_HOST
+ENV NEXT_PUBLIC_BACKEND_EC2_HOST=${NEXT_PUBLIC_BACKEND_EC2_HOST}
+
 RUN npm run build
 
 # Production image, copy all the files and run next
