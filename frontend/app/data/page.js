@@ -193,7 +193,9 @@ export default function HeatmapPage() {
             URL.revokeObjectURL(url);
         };
 
-		function FilteredTable({ tariffs, origin, mode }) {
+        function FilteredTable({ tariffs, origin, mode }) {
+            const [page, setPage] = useState(1);
+            useEffect(() => { setPage(1); }, [origin, mode, tariffs.length]);
             if (!origin) return <div className="text-gray-400">Select an origin country to view tariffs.</div>;
             let filtered = (tariffs || []).filter(t => mode === 'export' ? t.originCountry?.name === origin : t.destCountry?.name === origin);
             
@@ -243,6 +245,14 @@ export default function HeatmapPage() {
             const count = sorted.length;
             const avgAd = (sorted.reduce((s, t) => s + (t.adValoremRate || 0), 0) / Math.max(1, count)).toFixed(4);
             const avgSpec = (sorted.reduce((s, t) => s + (t.specificRate || 0), 0) / Math.max(1, count)).toFixed(2);
+
+            // --- Pagination ---
+            const PAGE_SIZE = 20;
+            const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+            // ensure page is within bounds when totalPages changes
+            useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages, page]);
+            const startIdx = (page - 1) * PAGE_SIZE;
+            const pageSlice = sorted.slice(startIdx, startIdx + PAGE_SIZE);
             return (
                 <div>
                     <div className="mb-2 text-sm text-gray-300">Matches: {count} — Avg ad-valorem: {avgAd} — Avg specific: {avgSpec}</div>
@@ -259,7 +269,7 @@ export default function HeatmapPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {sorted.map(t => {
+                                {pageSlice.map(t => {
                                     const expiryRaw = t.expiryDate ?? t.endDate ?? t.validUntil ?? null;
                                     const expired = isExpired(t);
                                     const rowStyle = { borderTop: '1px solid rgba(255,255,255,0.05)', ...(expired ? { backgroundColor: 'rgba(255,0,0,0.06)' } : {}) };
@@ -282,6 +292,25 @@ export default function HeatmapPage() {
                                 })}
                             </tbody>
                         </table>
+                        <div className="mt-2 flex items-center justify-between text-sm">
+                            <div>Showing {count === 0 ? 0 : startIdx + 1}-{Math.min(startIdx + PAGE_SIZE, count)} of {count}</div>
+                            <div className="space-x-2">
+                                <button className="px-2 py-1 bg-gray-800 text-gray-300 rounded" onClick={() => setPage(1)} disabled={page === 1}>First</button>
+                                <button className="px-2 py-1 bg-gray-800 text-gray-300 rounded" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
+                                <select
+                                    className="bg-black text-white px-2 py-1 rounded"
+                                    value={page}
+                                    onChange={e => setPage(Number(e.target.value))}
+                                >
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                                        <option key={n} value={n}>{n}</option>
+                                    ))}
+                                </select>
+                                <span>Page {page} of {totalPages}</span>
+                                <button className="px-2 py-1 bg-gray-800 text-gray-300 rounded" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
+                                <button className="px-2 py-1 bg-gray-800 text-gray-300 rounded" onClick={() => setPage(totalPages)} disabled={page === totalPages}>Last</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
