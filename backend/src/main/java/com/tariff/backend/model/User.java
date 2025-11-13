@@ -22,8 +22,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Entity
 @Data
 @Table(name = "users")
-@EqualsAndHashCode(exclude = {"tariffs"})
-@ToString(exclude = {"tariffs"})
+// @EqualsAndHashCode(exclude = {"tariffs"})
+// @ToString(exclude = {"tariffs"})
 public class User implements UserDetails{
   public enum Role { SUPER_ADMIN, ADMIN, USER }
   
@@ -57,9 +57,9 @@ public class User implements UserDetails{
   }
 
 
-  @ManyToMany(mappedBy = "users")
-  @JsonIgnore // avoid serializing tariffs on user to prevent cycles
-  private Set<Tariff> tariffs = new HashSet<>();
+//   @ManyToMany(mappedBy = "users")
+//   @JsonIgnore // avoid serializing tariffs on user to prevent cycles
+//   private Set<Tariff> tariffs = new HashSet<>();
 
     // Setters
     public void upgradeRole() {

@@ -25,8 +25,8 @@ import lombok.ToString;
 @Table(name = "tariff")
 @Data
 // Exclude collections from equals/hashCode to avoid circular references with Product and User
-@EqualsAndHashCode(exclude = {"products", "users"})
-@ToString(exclude = {"products", "users"})
+// @EqualsAndHashCode(exclude = {"products", "users"})
+// @ToString(exclude = {"products", "users"})
 public class Tariff {
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
@@ -66,13 +66,13 @@ public class Tariff {
 
 
     // Products associated with this tariff (owning side)
-  @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-  @JoinTable(
-    name = "tariff_user",
-    joinColumns = @JoinColumn(name = "tariff_id"),
-    inverseJoinColumns = @JoinColumn(name = "user_id")
-  )
-  private Set<User> users = new HashSet<>();
+  // @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+  // @JoinTable(
+  //   name = "tariff_user",
+  //   joinColumns = @JoinColumn(name = "tariff_id"),
+  //   inverseJoinColumns = @JoinColumn(name = "user_id")
+  // )
+  // private Set<User> users = new HashSet<>();
 
   // @OneToMany(mappedBy = "tariff", cascade = CascadeType.ALL)
   // private List<Product> products;

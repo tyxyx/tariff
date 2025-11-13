@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import { colors } from "@/styles/colors";
+import { apiFetch } from "@/utils/apiClient";
 
 export default function HeatmapPage() {
   const [tariffs, setTariffs] = useState([]);
@@ -126,7 +127,7 @@ export default function HeatmapPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/products`
         );
         if (!res.ok) return;
@@ -143,7 +144,7 @@ export default function HeatmapPage() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/countries`
         );
         if (!res.ok) return;
@@ -177,7 +178,7 @@ export default function HeatmapPage() {
     const fetchFromServer = async () => {
       try {
         setError(null);
-        const res = await fetch(
+        const res = await apiFetch(
           `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`
         );
         if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -206,7 +207,7 @@ export default function HeatmapPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs`
       );
       if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -386,7 +387,7 @@ export default function HeatmapPage() {
       let res;
       if (editingTariff && editingTariff.id) {
         console.debug("submitForm: updating (PUT)", updatePayload);
-        res = await fetch(`${base}/${editingTariff.id}`, {
+        res = await apiFetch(`${base}/${editingTariff.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatePayload),
@@ -394,7 +395,7 @@ export default function HeatmapPage() {
       } else {
         console.debug("submitForm: creating (POST)", createPayload);
         console.debug("submitForm: payload JSON", JSON.stringify(createPayload));
-        res = await fetch(base, {
+        res = await apiFetch(base, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(createPayload),
@@ -462,7 +463,7 @@ export default function HeatmapPage() {
     try {
       setLoading(true);
       // request permanent delete (softDelete=false) so the row is removed from DB
-      const res = await fetch(
+      const res = await apiFetch(
         `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/${t.id}?softDelete=false`,
         { method: "DELETE" }
       );

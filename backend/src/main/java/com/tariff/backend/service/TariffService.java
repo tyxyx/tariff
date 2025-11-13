@@ -70,6 +70,9 @@ public class TariffService {
     .orElseThrow(() -> new BadRequestException("Origin country code not found: " + addTariffDTO.getOriginCountry()));
   var dest = countries.findById(addTariffDTO.getDestCountry())
     .orElseThrow(() -> new BadRequestException("Destination country code not found: " + addTariffDTO.getDestCountry()));
+  if (origin.getCode().equals(dest.getCode())) {
+    throw new BadRequestException("Origin and destination countries cannot be the same.");
+  }
 
     tariff.setOriginCountry(origin);
     tariff.setDestCountry(dest);
