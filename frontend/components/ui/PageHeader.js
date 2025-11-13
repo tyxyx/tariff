@@ -93,7 +93,7 @@ export default function PageHeader() {
             </span>
 
             {user && (user.role === "SUPER_ADMIN" || user.role === "ADMIN") && (
-              <Link href="/dashboard/admin">
+              <Link href="/dashboard-admin">
                 <Button
                   variant="ghost"
                   size="sm"
