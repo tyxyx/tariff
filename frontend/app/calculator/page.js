@@ -368,7 +368,7 @@ export default function CalculatorPage() {
                       val = val.replace(/^0+(?=\d)/, "");
                       // Only allow valid numeric input (digits with max one decimal point)
                       if (/^\d*\.?\d*$/.test(val)) {
-                        setUnitPrice(val);
+                        setUnitPrice(Number(val));
                       }
                     }}
                     placeholder="Enter unit price"
