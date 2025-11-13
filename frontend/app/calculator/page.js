@@ -640,7 +640,7 @@ export default function CalculatorPage() {
                 <strong>Quantity:</strong> {quantity}
               </li>
               <li>
-                <strong>Unit Price:</strong> ${unitPrice}
+                <strong>Unit Price:</strong> ${unitPrice.toFixed(2)}
               </li>
               <li>
                 <strong>Calculation Date:</strong>{" "}
@@ -653,12 +653,12 @@ export default function CalculatorPage() {
                 <strong>Ad Valorem Rate:</strong> {summaryAdValoremRate}
               </li>
               <li>
-                <strong>Specific Duty Amount:</strong>{" "}
-                {summaryAmountSpecific.toLocaleString()}
+                <strong>Specific Duty Amount:</strong>{" $ "}
+                {summaryAmountSpecific.toFixed(2).toLocaleString()}
               </li>
               <li>
-                <strong>Ad Valorem Duty Amount:</strong>{" "}
-                {summaryAmountAdValorem.toLocaleString()}
+                <strong>Ad Valorem Duty Amount:</strong>{" $ "}
+                {summaryAmountAdValorem.toFixed(2).toLocaleString()}
               </li>
               {tariffError && activeTab !== "Simulation" && (
                 <li>
