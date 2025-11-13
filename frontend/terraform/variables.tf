@@ -26,7 +26,7 @@ variable "ssh_cidrs" {
 # Container config
 variable "image_name" {
   type    = string
-  default = "docker.io/wzinl/tarifffrontend" # Replace with your Docker Hub image
+  default = "docker.io/wzinl/tarifffrontend"
 }
 
 variable "image_tag" {

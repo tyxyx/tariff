@@ -27,12 +27,10 @@ jobs:
         script: |
           # Pull the image
           sudo docker image prune -a -f
-          # sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend:${{ inputs.docker_image_tag }}
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend
           sudo echo "$(date '+%Y-%m-%d %H:%M:%S') Pulled image: ${{ secrets.DOCKER_USERNAME }}/tariffbackend" >> ~/deploy-backend.log
           # Stop existing services
           sudo docker compose down || true
           
-          # Start services with new image tag
-          # sudo IMAGE_TAG=${{ inputs.docker_image_tag }} docker compose up -d
+          # Start service with latest image 
           sudo docker compose up -d
