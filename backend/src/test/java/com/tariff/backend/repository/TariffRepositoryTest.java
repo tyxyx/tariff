@@ -83,7 +83,7 @@ class TariffRepositoryTest {
         entityManager.flush();
 
         Optional<Tariff> result = tariffRepository.getTariffFromProductCountriesAndDates(
-                "1234.56.78",
+                "Test Product",
                 LocalDate.of(2024, 6, 15),
                 "CN",
                 "US"
@@ -178,7 +178,7 @@ class TariffRepositoryTest {
 
         // When - query with future date (should still work since no expiry)
         Optional<Tariff> result = tariffRepository.getTariffFromProductCountriesAndDates(
-                "1234.56.78",
+                "Test Product",
                 LocalDate.of(2025, 6, 15),
                 "CN",
                 "US"

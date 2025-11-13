@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/utils/apiClient";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,11 +11,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monitor } from "lucide-react";
+import { Calculator, Settings, Users, User, TextSearch, Map , MonitorCog, Monitor, Server } from "lucide-react";
 import { colors } from "@/styles/colors";
 import PageHeader from "@/components/ui/PageHeader";
 export default function DashboardPage() {
-  
+  const [currentUserRole, setCurrentUserRole] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchMe = async () => {
+      try {
+        const meRes = await apiFetch(
+          `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+        );
+        if (!meRes.ok) {
+          console.error("Failed to fetch current user. Status:", meRes.status);
+          return;
+        }
+        const meData = await meRes.json();
+        if (!mounted) return;
+            setCurrentUserRole(meData.role);
+
+      } catch (e) {
+        console.error("Error fetching current user:", e);
+      }
+    };
+    fetchMe();
+    return () => { mounted = false };
+  }, []);
 
   return (
     <div
@@ -95,6 +122,22 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
+          {currentUserRole === 'ADMIN' && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <Server className="h-12 w-12 text-primary mb-4" />
+                <CardTitle>Admin Panel</CardTitle>
+                <CardDescription>
+                  Manage users and administrative settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/admin">
+                  <Button className="w-full">Go to Admin</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

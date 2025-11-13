@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import com.tariff.backend.dto.ParticularTariffDTO;
 import com.tariff.backend.dto.ProductDTO;
 import com.tariff.backend.exception.BadRequestException;
 import com.tariff.backend.exception.NotFoundException;
+import com.tariff.backend.model.Country;
 import com.tariff.backend.model.Product;
 import com.tariff.backend.model.Tariff;
 import com.tariff.backend.repository.CountryRepository;
@@ -35,10 +37,10 @@ public class TariffService {
   // Methods:
   // 1. add in new tariff
   public Tariff addTariff(AddTariffDTO addTariffDTO) {
-    // Validate the DTO fields
-    if (addTariffDTO.getEffectiveDate().isAfter(addTariffDTO.getExpiryDate())) {
-        throw new BadRequestException("Effective date cannot be after expiry date");
-    }
+  // Validate the DTO fields: only compare when expiry is provided
+  if (addTariffDTO.getExpiryDate() != null && addTariffDTO.getEffectiveDate().isAfter(addTariffDTO.getExpiryDate())) {
+    throw new BadRequestException("Effective date cannot be after expiry date");
+  }
 
   // Check if a tariff with the same HTS code exists for the given origin/dest
   Optional<Tariff> existingTariff = getTariffsByHtsCode(addTariffDTO.getHtscode())
@@ -69,12 +71,33 @@ public class TariffService {
   var dest = countries.findById(addTariffDTO.getDestCountry())
     .orElseThrow(() -> new BadRequestException("Destination country code not found: " + addTariffDTO.getDestCountry()));
 
-  tariff.setOriginCountry(origin);
-  tariff.setDestCountry(dest);
+    tariff.setOriginCountry(origin);
+    tariff.setDestCountry(dest);
     tariff.setEffectiveDate(addTariffDTO.getEffectiveDate());
     tariff.setExpiryDate(addTariffDTO.getExpiryDate());
-    // Map DTO rate to ad valorem rate (single percentage). Specific rate left null unless added later.
-    tariff.setAdValoremRate(addTariffDTO.getRate());
+  
+    // Prefer the new 'rate' field (stored as decimal, e.g. 0.12). If not provided, fall back
+    // to the older 'adValoremRate' percentage field (e.g. 12.5 -> 0.125).
+    if (addTariffDTO.getRate() != null) {
+      tariff.setAdValoremRate(addTariffDTO.getRate());
+    } else if (addTariffDTO.getAdValoremRate() != null) {
+      tariff.setAdValoremRate(addTariffDTO.getAdValoremRate() / 100.0);
+    } else {
+      // Defensive default: 0.0 when no rate supplied
+      tariff.setAdValoremRate(0.0);
+    }
+      
+    // map optional specific rate from DTO
+    if (addTariffDTO.getSpecificRate() != null) {
+      tariff.setSpecificRate(addTariffDTO.getSpecificRate());
+    }
+    // set enabled flag (default true when DTO omitted)
+    try {
+      tariff.setEnabled(addTariffDTO.isEnabled());
+    } catch (Exception e) {
+      // defensive: default to true
+      tariff.setEnabled(true);
+    }
 
     // Ensure the referenced product (by HTS code) exists and associate it
     Product product = products.findById(addTariffDTO.getHtscode()).orElseGet(() -> {
@@ -212,4 +235,27 @@ public class TariffService {
 
     return tar.get();
   }
+
+  // 6. get valid dest countries for a product and origin country
+  public List<Country> getValidDestCountriesForProductAndOrigin(String originCountryCode, String productName) {
+    LocalDate today = LocalDate.now();
+
+    // Fetch tariffs for origin country and product name
+    List<Tariff> foundTariffs = this.tariffs.getTariffsByOriginCountryCodeAndProduct(originCountryCode, productName);
+
+    return foundTariffs.stream()
+        // not expired: expiryDate is null or expiryDate >= today
+        .filter(t -> t.getExpiryDate() == null || !t.getExpiryDate().isBefore(today))
+        // valid rates: at least one of adValoremRate or specificRate is non-zero
+        .filter(t -> {
+          Double ad = t.getAdValoremRate();
+          Double sp = t.getSpecificRate();
+          boolean adNonZero = ad != null && ad.doubleValue() != 0.0;
+          boolean spNonZero = sp != null && sp.doubleValue() != 0.0;
+          return adNonZero || spNonZero;
+        })
+        .map(Tariff::getDestCountry)
+        .distinct()
+        .collect(Collectors.toList());
+}
 }

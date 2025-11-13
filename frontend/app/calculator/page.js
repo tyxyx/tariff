@@ -27,10 +27,18 @@ export default function CalculatorPage() {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(1000);
   const [calculationDate, setCalculationDate] = useState("");
+  const [tariffError, setTariffError] = useState(null);
+  const [activeTab, setActiveTab] = useState("Calculator");
+  const [tariffs, setTariffs] = useState([]);
+  const [validDestCountries, setValidDestCountries] = useState([]);
 
-  // Merge conflict, not sure if still in use
-  const [activeTab, setActiveTab] = useState("calculator");
-  const [dateError, setDateError] = useState("");
+  // Simulation
+  const [simSpecificRate, setSimSpecificRate] = useState(0);
+  const [simAdValoremRate, setSimAdValoremRate] = useState(0);
+  const [specificRateFocused, setSpecificRateFocused] = useState(false);
+  const [adValoremRateFocused, setAdValoremRateFocused] = useState(false);
+  // Handler to remove leading zeros
+  const removeLeadingZeros = (val) => (val === "" ? "" : String(Number(val)));
 
   // Fetch countries and products on page load
   useEffect(() => {
@@ -55,8 +63,23 @@ export default function CalculatorPage() {
   }, []);
 
   useEffect(() => {
+    setProduct("");
+    setImportCountry("");
+    setExportCountry("");
+    setQuantity(1);
+    setUnitPrice(1000);
+    setCalculationDate(null);
+    setSpecificRate(0);
+    setAdValoremRate(0);
+    setSimSpecificRate(0);
+    setSimAdValoremRate(0);
+    setTariffError(null);
+  }, [activeTab]);
+
+  useEffect(() => {
     // Only call API if all fields are filled and calculationDate is valid
     if (product && originCountry && destCountry && calculationDate) {
+      setTariffError(null); // Reset error
       // Format date as YYYY-MM-DD
       const formattedDate = calculationDate.toISOString().split("T")[0];
       // TODO: change this to process.env
@@ -75,21 +98,107 @@ export default function CalculatorPage() {
           }),
         }
       )
-        .then((res) => res.json())
-        .then((data) => {
-          setAdValoremRate(data.adValoremRate ?? 0);
-          setSpecificRate(data.specificRate ?? 0);
+        .then((res) => {
+          if (res.status === 204) {
+            // No content
+            return null; // or set a specific value to indicate no data
+          }
+          if (!res.ok) {
+            throw new Error(`Server error: ${res.status} ${res.statusText}`);
+          }
+          return res.json();
         })
-        .catch(() => setTariffRate(0));
-    } else {
-      setAdValoremRate(0);
-      setSpecificRate(0);
+        .then((data) => {
+          if (data === null) {
+            // No results found, handle accordingly
+            setTariffError("No tariff found for the selected criteria.");
+            setAdValoremRate(0);
+            setSpecificRate(0);
+          } else {
+            // Normal data processing
+            setAdValoremRate(data.adValoremRate ?? 0);
+            setSpecificRate(data.specificRate ?? 0);
+            setTariffError(null);
+          }
+        })
+        .catch((error) => {
+          // Handle network or server errors
+          setTariffError(error.message || "Failed to fetch tariff rates.");
+          setAdValoremRate(0);
+          setSpecificRate(0);
+        });
     }
   }, [product, originCountry, destCountry, calculationDate]);
 
+  useEffect(() => {
+    // Only fetch valid destinations when user has selected product, origin and calculation date
+    if (
+      activeTab === "Calculator" &&
+      originCountry &&
+      product &&
+      calculationDate
+    ) {
+      const originParam = encodeURIComponent(originCountry);
+      const productParam = encodeURIComponent(product);
+      fetch(
+        `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/tariffs/valid-destinations?originCountry=${originParam}&productName=${productParam}`
+      )
+        .then(async (res) => {
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || "Failed to load valid destinations");
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (Array.isArray(data) && data.length === 0) {
+            setTariffError(
+              "No valid tariff data for selected import country and product."
+            );
+            setValidDestCountries([]);
+          } else {
+            setTariffError(null);
+            setValidDestCountries(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch((error) => {
+          setTariffError(error.message || "Error fetching valid destinations.");
+          setValidDestCountries([]);
+        });
+    } else {
+      setValidDestCountries([]);
+      setTariffError(null);
+    }
+  }, [activeTab, originCountry, product, calculationDate]);
+
+  // Helper to display full country name when state stores country codes
+  const findCountryName = (code) => {
+    if (!code) return "";
+    const fromCountries = countries.find((c) => c.code === code);
+    if (fromCountries) return fromCountries.name;
+    const fromValid = validDestCountries.find((c) => c.code === code);
+    if (fromValid) return fromValid.name;
+    return code;
+  };
+
   // Calculate tariff amount
-  const amountSpecific = specificRate * quantity;
-  const amountAdValorem = (adValoremRate / 100) * (unitPrice * quantity);
+  const summarySpecificRate =
+    activeTab === "Calculator" ? specificRate : simSpecificRate;
+  const summaryAdValoremRate =
+    activeTab === "Calculator" ? adValoremRate : simAdValoremRate;
+  // Render summary using these values
+  const summaryAmountSpecific = summarySpecificRate * quantity;
+  const summaryAmountAdValorem =
+    (summaryAdValoremRate / 100) * (unitPrice * quantity);
+
+  function resetSummaryAndInputs() {
+    setExportCountry("");
+    setAdValoremRate(0);
+    setSpecificRate(0);
+    setSimSpecificRate(0);
+    setSimAdValoremRate(0);
+    setTariffError(null);
+  }
 
   return (
     <div
@@ -107,135 +216,406 @@ export default function CalculatorPage() {
               Enter product details and select countries to calculate tariffs.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form className="space-y-4">
-              {/* ...existing calculator form code... */}
-              <div>
-                <label className="block mb-1 font-medium">Product Name</label>
-                <select
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={product}
-                  onChange={(e) => setProduct(e.target.value)}
-                >
-                  <option value="" disabled hidden>
-                    Select product
-                  </option>
-                  {products.map((product) => (
-                    <option key={product.name} value={product.name}>
-                      {product.name}
+          {/* Tabs */}
+          <div className="flex border-b border-gray-700 mb-6">
+            <button
+              className={`px-4 py-2 text-white font-medium border-b-2 ${
+                activeTab === "Calculator"
+                  ? "border-blue-500"
+                  : "border-transparent"
+              }`}
+              onClick={() => setActiveTab("Calculator")}
+            >
+              Calculator
+            </button>
+            <button
+              className={`px-4 py-2 text-white font-medium border-b-2 ${
+                activeTab === "Simulation"
+                  ? "border-blue-500"
+                  : "border-transparent"
+              }`}
+              onClick={() => setActiveTab("Simulation")}
+            >
+              Simulation
+            </button>
+          </div>
+          {activeTab === "Calculator" && (
+            <CardContent>
+              <form className="space-y-4">
+                <div>
+                  <label className="block mb-1 font-medium">Product Name</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={product}
+                    onChange={(e) => {
+                      resetSummaryAndInputs();
+                      setProduct(e.target.value);
+                    }}
+                  >
+                    <option value="" disabled hidden>
+                      Select product
                     </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Import Country</label>
-                <select
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={originCountry}
-                  onChange={(e) => setImportCountry(e.target.value)}
-                >
-                  <option value="" disabled hidden>
-                    Select country
-                  </option>
-                  {countries.map((country) => (
-                    <option key={country.name} value={country.name}>
-                      {country.name}
+                    {products.map((product) => (
+                      <option key={product.name} value={product.name}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Import Country
+                  </label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={originCountry}
+                    onChange={(e) => {
+                      resetSummaryAndInputs();
+                      setImportCountry(e.target.value);
+                    }}
+                  >
+                    <option value="" disabled hidden>
+                      Select country
                     </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Export Country</label>
-                <select
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={destCountry}
-                  onChange={(e) => setExportCountry(e.target.value)}
-                >
-                  <option value="" disabled hidden>
-                    Select country
-                  </option>
-                  {countries.map((country) => (
-                    <option key={country.name} value={country.name}>
-                      {country.name}
+                    {countries
+                      .filter(
+                        (country) =>
+                          country.name !== "World" &&
+                          country.name !== "Unspecified"
+                      )
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Calculation Date
+                  </label>
+                  <DatePicker
+                    selected={calculationDate}
+                    onChange={(date) => {
+                      resetSummaryAndInputs();
+                      setCalculationDate(date);
+                    }}
+                    selectsStart
+                    calculationDate={calculationDate}
+                    placeholderText="Select calculation date"
+                    className="w-full border rounded px-3 py-2"
+                    popperPlacement="bottom"
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Export Country
+                  </label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={destCountry}
+                    onChange={(e) => setExportCountry(e.target.value)}
+                  >
+                    <option value="" disabled hidden>
+                      Select country
                     </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">
-                  Calculation Date
-                </label>
-                <DatePicker
-                  selected={calculationDate}
-                  onChange={(date) => setCalculationDate(date)}
-                  selectsStart
-                  calculationDate={calculationDate}
-                  placeholderText="Select calculation date"
-                  className="w-full border rounded px-3 py-2"
-                  popperPlacement="bottom"
-                  style={{ backgroundColor: "black", color: "white" }}
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Quantity</label>
-                <input
-                  type="number"
-                  min={1}
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={quantity}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/^0+/, "");
-                    setQuantity(val === "" ? "" : Number(val));
-                  }}
-                  placeholder="Enter quantity"
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Unit Price</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-full border rounded px-3 py-2"
-                  style={{ backgroundColor: "black", color: "white" }}
-                  value={unitPrice}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/^0+/, "");
-                    setUnitPrice(val === "" ? "" : Number(val));
-                  }}
-                  placeholder="Enter unit price"
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Specific Rate</label>
-                <input
-                  type="text"
-                  id="specificRate"
-                  className="w-full border rounded px-3 py-2"
-                  value={specificRate}
-                  readOnly
-                  style={{ backgroundColor: "black", color: "white" }}
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">
-                  Ad Valorem Rate (%)
-                </label>
-                <input
-                  type="text"
-                  id="adValoremRate"
-                  className="w-full border rounded px-3 py-2"
-                  value={adValoremRate}
-                  readOnly
-                  style={{ backgroundColor: "black", color: "white" }}
-                />
-              </div>
-            </form>
-          </CardContent>
+                    {validDestCountries.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Quantity</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={quantity}
+                    onChange={(e) => {
+                      let val = e.target.value;
+
+                      // Remove leading zeros
+                      val = val.replace(/^0+/, "");
+
+                      // Allow only integers - remove decimal points if any
+                      val = val.split(".")[0];
+                      setQuantity(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Unit Price</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={unitPrice}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/^0+/, "");
+                      setUnitPrice(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter unit price"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Specific Rate
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={
+                      activeTab === "Calculator"
+                        ? specificRate
+                        : simSpecificRate
+                    }
+                    onChange={(e) =>
+                      activeTab === "Calculator"
+                        ? setSpecificRate(Number(e.target.value))
+                        : setSimSpecificRate(Number(e.target.value))
+                    }
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    readOnly={activeTab === "Calculator"} // only editable for Simulation
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Ad Valorem Rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={
+                      activeTab === "Calculator"
+                        ? adValoremRate
+                        : simAdValoremRate
+                    }
+                    onChange={(e) =>
+                      activeTab === "Calculator"
+                        ? setAdValoremRate(Number(e.target.value))
+                        : setSimAdValoremRate(Number(e.target.value))
+                    }
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    readOnly={activeTab === "Calculator"}
+                  />
+                </div>
+              </form>
+            </CardContent>
+          )}
+
+          {activeTab === "Simulation" && (
+            <CardContent>
+              <form className="space-y-4">
+                <div>
+                  <label className="block mb-1 font-medium">Product Name</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={product}
+                    onChange={(e) => {
+                      resetSummaryAndInputs();
+                      setProduct(e.target.value);
+                    }}
+                  >
+                    <option value="" disabled hidden>
+                      Select product
+                    </option>
+                    {products.map((product) => (
+                      <option key={product.name} value={product.name}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Import Country
+                  </label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={originCountry}
+                    onChange={(e) => {
+                      resetSummaryAndInputs();
+                      setImportCountry(e.target.value);
+                    }}
+                  >
+                    <option value="" disabled hidden>
+                      Select country
+                    </option>
+                    {countries
+                      .filter(
+                        (country) =>
+                          country.name !== "World" &&
+                          country.name !== "Unspecified"
+                      )
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Calculation Date
+                  </label>
+                  <DatePicker
+                    selected={calculationDate}
+                    onChange={(date) => {
+                      resetSummaryAndInputs();
+                      setCalculationDate(date);
+                    }}
+                    selectsStart
+                    calculationDate={calculationDate}
+                    placeholderText="Select calculation date"
+                    className="w-full border rounded px-3 py-2"
+                    popperPlacement="bottom"
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Export Country
+                  </label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={destCountry}
+                    onChange={(e) => setExportCountry(e.target.value)}
+                  >
+                    <option value="" disabled hidden>
+                      Select country
+                    </option>
+                    {countries
+                      .filter(
+                        (country) =>
+                          country.name !== "World" &&
+                          country.name !== "Unspecified"
+                      )
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">Quantity</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={quantity}
+                    onChange={(e) => {
+                      let val = e.target.value;
+
+                      // Remove leading zeros
+                      val = val.replace(/^0+/, "");
+
+                      // Allow only integers - remove decimal points if any
+                      val = val.split(".")[0];
+                      setQuantity(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Unit Price</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                    value={unitPrice}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/^0+/, "");
+                      setUnitPrice(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter unit price"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Specific Rate
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    placeholder="0"
+                    value={
+                      !specificRateFocused &&
+                      (simSpecificRate === "" || simSpecificRate === "0")
+                        ? "" // placeholder is shown
+                        : removeLeadingZeros(simSpecificRate)
+                    }
+                    onFocus={() => {
+                      setSpecificRateFocused(true);
+                      if (simSpecificRate === "0") setSimSpecificRate("");
+                    }}
+                    onBlur={() => setSpecificRateFocused(false)}
+                    onChange={(e) =>
+                      setSimSpecificRate(e.target.value.replace(/^0+/, ""))
+                    }
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Ad Valorem Rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    placeholder="0"
+                    value={
+                      !adValoremRateFocused &&
+                      (simAdValoremRate === "" || simAdValoremRate === "0")
+                        ? ""
+                        : removeLeadingZeros(simAdValoremRate)
+                    }
+                    onFocus={() => {
+                      setAdValoremRateFocused(true);
+                      if (simAdValoremRate === "0") setSimAdValoremRate("");
+                    }}
+                    onBlur={() => setAdValoremRateFocused(false)}
+                    onChange={(e) =>
+                      setSimAdValoremRate(e.target.value.replace(/^0+/, ""))
+                    }
+                    className="w-full border rounded px-3 py-2"
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+              </form>
+            </CardContent>
+          )}
         </Card>
+
         {/* Tariff Summary Card */}
         <Card className="max-w-md w-full mx-auto">
           <CardHeader>
@@ -248,10 +628,12 @@ export default function CalculatorPage() {
                 <strong>Product:</strong> {product || "-"}
               </li>
               <li>
-                <strong>Import Country:</strong> {originCountry || "-"}
+                <strong>Import Country:</strong>{" "}
+                {findCountryName(originCountry) || "-"}
               </li>
               <li>
-                <strong>Export Country:</strong> {destCountry || "-"}
+                <strong>Export Country:</strong>{" "}
+                {findCountryName(destCountry) || "-"}
               </li>
               <li>
                 <strong>Quantity:</strong> {quantity}
@@ -264,19 +646,38 @@ export default function CalculatorPage() {
                 {calculationDate ? calculationDate.toLocaleDateString() : "-"}
               </li>
               <li>
-                <strong>Specific Rate:</strong> {specificRate}
+                <strong>Specific Rate:</strong> {summarySpecificRate}
               </li>
               <li>
-                <strong>Ad Valorem Rate (%):</strong> {adValoremRate}
+                <strong>Ad Valorem Rate (%):</strong> {summaryAdValoremRate}
               </li>
               <li>
                 <strong>Specific Duty Amount:</strong>{" "}
-                {amountSpecific.toLocaleString()}
+                {summaryAmountSpecific.toLocaleString()}
               </li>
               <li>
                 <strong>Ad Valorem Duty Amount:</strong>{" "}
-                {amountAdValorem.toLocaleString()}
+                {summaryAmountAdValorem.toLocaleString()}
               </li>
+              {tariffError && activeTab !== "Simulation" && (
+                <li>
+                  <div
+                    style={{
+                      marginTop: "0.7rem",
+                      color: "#ff5151",
+                      background: "#261618",
+                      border: "1px solid #512f3d",
+                      borderRadius: "8px",
+                      padding: "0.75rem 1rem",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                    }}
+                    role="alert"
+                  >
+                    {tariffError}
+                  </div>
+                </li>
+              )}
             </ul>
           </CardContent>
         </Card>

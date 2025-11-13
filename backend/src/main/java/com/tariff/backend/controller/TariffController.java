@@ -2,6 +2,7 @@ package com.tariff.backend.controller;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tariff.backend.dto.AddTariffDTO;
+import com.tariff.backend.dto.CountryDTO;
 import com.tariff.backend.dto.ParticularTariffDTO;
 import com.tariff.backend.dto.ProductDTO;
+import com.tariff.backend.model.Country;
 import com.tariff.backend.model.Tariff;
 import com.tariff.backend.service.TariffService;
 
@@ -41,12 +44,13 @@ public class TariffController {
     return ResponseEntity.ok().body(tariffService.listTariff());
   }
 
-  @PostMapping() 
+  @PostMapping()
   public ResponseEntity<String> addTariff(@Valid @RequestBody AddTariffDTO addTariffDTO) {
     tariffService.addTariff(addTariffDTO);
     return ResponseEntity.status(201).body("Tariff Created");
   }
-// todo change to getmapping use req header/ params
+
+  // todo change to getmapping use req header/ params
   @PostMapping("/particular-tariff-rate")
   public ResponseEntity<Tariff> particularTariffRate(@Valid @RequestBody ParticularTariffDTO particularTariffDTO) {
     return ResponseEntity.ok().body(tariffService.getParticularTariff(particularTariffDTO));
@@ -68,7 +72,8 @@ public class TariffController {
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<String> deleteTariff(@PathVariable UUID id, @RequestParam(required = false) Boolean softDelete) {
+  public ResponseEntity<String> deleteTariff(@PathVariable UUID id,
+      @RequestParam(required = false) Boolean softDelete) {
     if (softDelete == null) {
       softDelete = true;
     }
@@ -80,4 +85,16 @@ public class TariffController {
   public ResponseEntity<Tariff> getTariffById(@PathVariable UUID id) {
     return ResponseEntity.ok().body(tariffService.getTariffById(id));
   }
+
+  @GetMapping("/valid-destinations")
+  public List<CountryDTO> getValidDestinations(
+      @RequestParam String originCountry,
+      @RequestParam String productName) {
+
+    List<Country> countries = tariffService.getValidDestCountriesForProductAndOrigin(originCountry, productName);
+
+    // Convert to DTO
+    return countries.stream().map(c -> new CountryDTO(c.getCode(), c.getName())).collect(Collectors.toList());
+  }
+
 }

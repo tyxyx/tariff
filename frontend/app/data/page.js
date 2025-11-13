@@ -12,6 +12,24 @@ export default function HeatmapPage() {
         const [selectedOrigin, setSelectedOrigin] = useState("");
         const [mode, setMode] = useState("export"); // 'export' = tariffs from origin -> dest, 'import' = tariffs where dest == origin
         const [hideExpired, setHideExpired] = useState(false);
+    const productCodeVal = (p) => p?.HTS_code ?? p?.hts_code ?? p?.htscode ?? p?.HTSCode ?? p?.code ?? p?.id ?? p?.name ?? "";
+    // products list from backend (contains HTS_code and name)
+    const [productsList, setProductsList] = useState([]);
+
+    // fetch products from backend so we can show names for HTS codes
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const res = await fetch(`http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/products`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (Array.isArray(data)) setProductsList(data);
+            } catch (e) {
+                console.warn('Failed fetching products', e);
+            }
+        };
+        fetchProducts();
+    }, []);
         
         // --- caching helpers: try cookie first, fallback to localStorage ---
         const clearTariffsCache = useCallback(() => {
@@ -177,7 +195,7 @@ export default function HeatmapPage() {
                 expiryDate: t.expiryDate ?? t.endDate ?? t.validUntil ?? '',
                 adValoremRate: t.adValoremRate ?? '',
                 specificRate: t.specificRate ?? '',
-                products: (t.products || []).map(p => p.htsCode ?? p.code ?? p.name).join(';')
+                products: (t.products || []).map(p => productCodeVal(p)).join(';')
             }));
             const header = Object.keys(rows[0]);
             const csv = [header.join(',')].concat(rows.map(r => header.map(h => `"${String(r[h] ?? '') .replace(/"/g, '""')}"`).join(','))).join('\n');
@@ -240,11 +258,11 @@ export default function HeatmapPage() {
             });
 
             const count = sorted.length;
-            const avgAd = (sorted.reduce((s, t) => s + (t.adValoremRate || 0), 0) / Math.max(1, count)).toFixed(2);
+            const avgAd = (sorted.reduce((s, t) => s + (t.adValoremRate || 0), 0) / Math.max(1, count)).toFixed(4);
             const avgSpec = (sorted.reduce((s, t) => s + (t.specificRate || 0), 0) / Math.max(1, count)).toFixed(2);
             return (
                 <div>
-                    <div className="mb-2 text-sm text-gray-300">Matches: {count} — Avg ad-valorem: {avgAd}% — Avg specific: {avgSpec}</div>
+                    <div className="mb-2 text-sm text-gray-300">Matches: {count} — Avg ad-valorem: {avgAd} — Avg specific: {avgSpec}</div>
                     <div className="overflow-auto">
                         <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                             <thead>
@@ -252,7 +270,7 @@ export default function HeatmapPage() {
                                     <th className="text-left pr-4 pb-2">{mode === 'export' ? 'Destination' : 'Origin'}</th>
                                     <th className="text-left pr-4 pb-2">Effective</th>
                                     <th className="text-left pr-4 pb-2">Expiry</th>
-                                    <th className="text-left pr-4 pb-2">Ad Valorem %</th>
+                                    <th className="text-left pr-4 pb-2">Ad Valorem</th>
                                     <th className="text-left pr-4 pb-2">Specific</th>
                                     <th className="text-left pr-4 pb-2">Products (HTS)</th>
                                 </tr>
@@ -269,7 +287,15 @@ export default function HeatmapPage() {
                                             <td className="pr-4 py-2">{expiryRaw ?? '-'}</td>
                                             <td className="pr-4 py-2">{t.adValoremRate ?? '-'}</td>
                                             <td className="pr-4 py-2">{t.specificRate ?? '-'}</td>
-                                            <td className="pr-4 py-2">{(t.products || []).map(p => p.htsCode ?? p.code ?? p.name).slice(0,5).join(', ')}{(t.products || []).length > 5 ? '…' : ''}</td>
+                                            <td className="pr-4 py-2">{(t.products || [])
+                                                .map((p) => {
+                                                    const code = productCodeVal(p);
+                                                    const normalize = (q) => q?.HTS_code ?? q?.hts_code ?? q?.htscode ?? q?.HTSCode ?? q?.code ?? q?.id ?? "";
+                                                    const found = (productsList || []).find((q) => normalize(q) === code);
+                                                    return found?.name ?? p?.name ?? code;
+                                                })
+                                                .slice(0,5)
+                                                .join(', ')}{(t.products || []).length > 5 ? '…' : ''}</td>
                                         </tr>
                                     );
                                 })}
