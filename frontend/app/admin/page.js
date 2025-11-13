@@ -682,7 +682,13 @@ export default function HeatmapPage() {
                     <td className="pr-4 py-2">{t.specificRate ?? "-"}</td>
                     <td className="pr-4 py-2">
                       {(t.products || [])
-                        .map((p) => productCodeVal(p))
+                        .map((p) => {
+                          const code = productCodeVal(p);
+                          const normalize = (q) =>
+                            q?.HTS_code ?? q?.hts_code ?? q?.htscode ?? q?.HTSCode ?? q?.code ?? q?.id ?? "";
+                          const found = (productsList || []).find((q) => normalize(q) === code);
+                          return found?.name ?? p?.name ?? code;
+                        })
                         .slice(0, 5)
                         .join(", ")}
                       {(t.products || []).length > 5 ? "…" : ""}
@@ -894,7 +900,7 @@ export default function HeatmapPage() {
                     </div>
                     <div>
                       <label className="block text-sm">
-                        Ad valorem (decimal)
+                        Ad valorem
                       </label>
                       <input
                         className="w-full px-2 py-1 bg-black border rounded"
@@ -907,13 +913,11 @@ export default function HeatmapPage() {
                         }
                         type="number"
                         step="0.0001"
-                        placeholder="e.g. 0.12"
+                        placeholder="e.g. 1.2"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm">
-                        Specific (decimal)
-                      </label>
+                      <label className="block text-sm">Specific</label>
                       <input
                         className="w-full px-2 py-1 bg-black border rounded"
                         value={formState.specificRate}
@@ -925,6 +929,7 @@ export default function HeatmapPage() {
                         }
                         type="number"
                         step="0.01"
+                        placeholder="e.g. 10"
                       />
                     </div>
                     <div className="col-span-2">
@@ -973,18 +978,7 @@ export default function HeatmapPage() {
                     <div className="text-red-400 mt-2">{formError}</div>
                   )}
 
-                  {Object.keys(fieldErrors || {}).length > 0 && (
-                    <div className="mt-2 text-sm text-yellow-300">
-                      <div className="font-medium">Validation errors:</div>
-                      <ul className="list-disc ml-5">
-                        {Object.entries(fieldErrors).map(([k, v]) => (
-                          <li key={k}>
-                            <strong>{k}</strong>: {String(v)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  
 
                   <div className="mt-3 flex items-center">
                     <button
