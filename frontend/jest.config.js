@@ -21,6 +21,16 @@ const customJestConfig = {
     '\\.(css|less|sass|scss)$': '<rootDir>/__mocks__/styleMock.js',
   },
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/.next/',
+    '/coverage/',
+    'jest.config.js',
+    'jest.setup.js',
+    'next.config.mjs',
+    '/app/layout.js',
+    '/styles/colors.js',
+  ],
 };
 
 module.exports = createJestConfig(customJestConfig);

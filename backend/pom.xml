@@ -168,6 +168,8 @@
 						<exclude>**/exception/*Exception.class</exclude>
 						<!-- Exclude main application class -->
 						<exclude>**/BackendApplication.class</exclude>
+						<!-- Exclude Spring configuration classes (boilerplate) -->
+						<exclude>**/config/**</exclude>
 					</excludes>
 				</configuration>
 				<executions>
