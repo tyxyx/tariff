@@ -912,8 +912,8 @@ export default function HeatmapPage() {
                           }))
                         }
                         type="number"
-                        step="0.0001"
-                        placeholder="e.g. 1.2"
+                        step="0.001"
+                        placeholder="e.g. 0.1 = 10%"
                       />
                     </div>
                     <div>
@@ -928,8 +928,8 @@ export default function HeatmapPage() {
                           }))
                         }
                         type="number"
-                        step="0.01"
-                        placeholder="e.g. 10"
+                        step="0.1"
+                        placeholder="e.g. 1.2"
                       />
                     </div>
                     <div className="col-span-2">
