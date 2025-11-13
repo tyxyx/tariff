@@ -123,38 +123,38 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
-          {currentUserRole === 'ADMIN'||'SUPER_ADMIN' && (
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <Server className="h-12 w-12 text-primary mb-4" />
-                <CardTitle>Edit Tariffs</CardTitle>
-                <CardDescription>
-                  CRUD functionality on tariff data
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/crud">
-                  <Button className="w-full">Go to CRUD</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-          {currentUserRole === 'ADMIN'||'SUPER_ADMIN' && (
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <UserCog className="h-12 w-12 text-primary mb-4" />
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                  Manage user accounts and roles
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/user-management">
-                  <Button className="w-full">Manage Users</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
+          {(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <Server className="h-12 w-12 text-primary mb-4" />
+                  <CardTitle>Edit Tariffs</CardTitle>
+                  <CardDescription>
+                    CRUD functionality on tariff data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/crud">
+                    <Button className="w-full">Go to CRUD</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+          {(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <UserCog className="h-12 w-12 text-primary mb-4" />
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>
+                    Manage user accounts and roles
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/user-management">
+                    <Button className="w-full">Manage Users</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
         </div>
       </div>
     </div>
