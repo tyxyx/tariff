@@ -25,6 +25,7 @@ export default function DashboardPage() {
           `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
         );
         if (!meRes.ok) {
+          console.log("meRes not ok");
           console.error("Failed to fetch current user. Status:", meRes.status);
           return;
         }
@@ -126,14 +127,14 @@ export default function DashboardPage() {
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <Server className="h-12 w-12 text-primary mb-4" />
-                <CardTitle>Admin Panel</CardTitle>
+                <CardTitle>Edit Tariffs</CardTitle>
                 <CardDescription>
-                  Manage users and administrative settings
+                  CRUD functionality on tariff data
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/admin">
-                  <Button className="w-full">Go to Admin</Button>
+                <Link href="/crud">
+                  <Button className="w-full">Go to CRUD</Button>
                 </Link>
               </CardContent>
             </Card>

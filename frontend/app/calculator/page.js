@@ -189,7 +189,7 @@ export default function CalculatorPage() {
   // Render summary using these values
   const summaryAmountSpecific = summarySpecificRate * quantity;
   const summaryAmountAdValorem =
-    (summaryAdValoremRate / 100) * (unitPrice * quantity);
+    (summaryAdValoremRate) * (unitPrice * quantity);
 
   function resetSummaryAndInputs() {
     setExportCountry("");
@@ -376,6 +376,7 @@ export default function CalculatorPage() {
                     type="number"
                     min={0}
                     step="any"
+                    
                     value={
                       activeTab === "Calculator"
                         ? specificRate
@@ -394,7 +395,7 @@ export default function CalculatorPage() {
 
                 <div>
                   <label className="block mb-1 font-medium">
-                    Ad Valorem Rate (%)
+                    Ad Valorem Rate
                   </label>
                   <input
                     type="number"
@@ -586,7 +587,7 @@ export default function CalculatorPage() {
 
                 <div>
                   <label className="block mb-1 font-medium">
-                    Ad Valorem Rate (%)
+                    Ad Valorem Rate
                   </label>
                   <input
                     type="number"
@@ -649,7 +650,7 @@ export default function CalculatorPage() {
                 <strong>Specific Rate:</strong> {summarySpecificRate}
               </li>
               <li>
-                <strong>Ad Valorem Rate (%):</strong> {summaryAdValoremRate}
+                <strong>Ad Valorem Rate:</strong> {summaryAdValoremRate}
               </li>
               <li>
                 <strong>Specific Duty Amount:</strong>{" "}

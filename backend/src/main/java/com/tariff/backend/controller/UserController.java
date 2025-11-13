@@ -69,7 +69,7 @@ public class UserController {
 
     // ✅ Set HttpOnly cookie
     Cookie cookie = new Cookie("auth_token", jwtToken);
-    cookie.setHttpOnly(true);  // Prevents JavaScript access
+    cookie.setHttpOnly(false);  // Prevents JavaScript access
     cookie.setSecure(false);    // Only sent over HTTPS (set false for local dev)
     cookie.setPath("/");       // Available for all paths
     cookie.setMaxAge(3 * 24 * 60 * 60); // 3 days in seconds
