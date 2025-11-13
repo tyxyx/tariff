@@ -29,7 +29,7 @@ jobs:
           # Pull the latest image
           # sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend:${{ inputs.docker_image_tag }}
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tarifffrontend
-          sudo echo "Pulled image: ${{ secrets.DOCKER_USERNAME }}/tarifffrontend" >> ~/deploy-frontend.log
+          sudo echo "$(date '+%Y-%m-%d %H:%M:%S') Pulled image: ${{ secrets.DOCKER_USERNAME }}/tarifffrontend" >> ~/deploy-frontend.log
           # Stop existing services
           sudo docker compose down || true
           
