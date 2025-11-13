@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,8 +13,32 @@ import {
 import { colors } from "@/styles/colors";
 import Header from "@/components/ui/header";
 import { Calculator, Shield, Users } from "lucide-react";
+import { apiFetch } from "@/utils/apiClient";
 
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await apiFetch(
+          `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+        );
+
+        if (res.ok) {
+          // User is authenticated, redirect to dashboard
+          router.push("/dashboard");
+        }
+        // If not ok, user is not logged in, stay on homepage
+      } catch (err) {
+        // If there's an error, assume user is not logged in
+        console.log("User not authenticated");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
   return (
     <div
       className="min-h-screen"
@@ -33,7 +61,6 @@ export default function HomePage() {
             style={{ color: colors.mutedText }}
           >
             Professional tariff calculation platform for international trade...
-            
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/login">
@@ -83,8 +110,7 @@ export default function HomePage() {
                 <Users className="h-12 w-12 text-primary mb-4" />
                 <CardTitle>Profile Management</CardTitle>
                 <CardDescription>
-                  Admin controls for managing tariff
-                  data and users
+                  Admin controls for managing tariff data and users
                 </CardDescription>
               </CardHeader>
             </Card>
