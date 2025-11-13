@@ -1,16 +1,16 @@
 package com.tariff.backend.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import com.google.genai.Client;
-import com.google.genai.types.GenerateContentResponse;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
 
 
 @Service
@@ -18,7 +18,7 @@ public class PredictionService {
     @Value("${GEMINI_API_KEY}")
     private String apiKey;
 
-    private static final String MODEL = "gemini-2.5-flash";
+    private static final String MODEL = "gemini-2.5-flash-lite";
 
     public String sendPdfToGemini(MultipartFile file, String country) {
         String extractedText = extractTextFromPdf(file);
