@@ -1,5 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import { colors } from "@/styles/colors";
 import {
   Card,
@@ -29,7 +28,6 @@ export default function CalculatorPage() {
   const [calculationDate, setCalculationDate] = useState("");
   const [tariffError, setTariffError] = useState(null);
   const [activeTab, setActiveTab] = useState("Calculator");
-  const [tariffs, setTariffs] = useState([]);
   const [validDestCountries, setValidDestCountries] = useState([]);
 
   // Simulation
@@ -368,7 +366,7 @@ export default function CalculatorPage() {
                       val = val.replace(/^0+(?=\d)/, "");
                       // Only allow valid numeric input (digits with max one decimal point)
                       if (/^\d*\.?\d*$/.test(val)) {
-                        setUnitPrice(Number(val));
+                        setUnitPrice(val);
                       }
                     }}
                     placeholder="Enter unit price"
@@ -542,7 +540,7 @@ export default function CalculatorPage() {
 
                       // Allow only integers - remove decimal points if any
                       val = val.split(".")[0];
-                      setQuantity(val === "" ? "" : Number(val));
+                      setQuantity(val === "" ? "" : val);
                     }}
                     placeholder="Enter quantity"
                   />
@@ -666,7 +664,7 @@ export default function CalculatorPage() {
                 <strong>Quantity:</strong> {quantity}
               </li>
               <li>
-                <strong>Unit Price:</strong> ${unitPrice.toFixed(2)}
+                <strong>Unit Price:</strong> ${Number(unitPrice || 0).toFixed(2)}
               </li>
               <li>
                 <strong>Calculation Date:</strong>{" "}

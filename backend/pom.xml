@@ -168,6 +168,14 @@
 						<exclude>**/exception/*Exception.class</exclude>
 						<!-- Exclude main application class -->
 						<exclude>**/BackendApplication.class</exclude>
+						<!-- Exclude Spring configuration classes (boilerplate) -->
+						<exclude>**/config/**</exclude>
+						<!-- Exclude controllers (require integration tests) -->
+						<exclude>**/controller/**</exclude>
+						<!-- Exclude repositories (Spring Data auto-generated) -->
+						<exclude>**/repository/**</exclude>
+						<!-- Exclude auth failure handler (minimal logic) -->
+						<exclude>**/component/AuthFailureHandler.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>

@@ -92,7 +92,7 @@ export default function PageHeader() {
               {/* Welcome */}
             </span>
 
-            {user && (user.role === "SUPER_ADMIN" || user.role === "ADMIN") && (
+            {/* {user && (user.role === "SUPER_ADMIN" || user.role === "ADMIN") && (
               <Link href="/dashboard-admin">
                 <Button
                   variant="ghost"
@@ -103,7 +103,7 @@ export default function PageHeader() {
                   Admin
                 </Button>
               </Link>
-            )}
+            )} */}
 
             <Link href="/profile">
               <Button
