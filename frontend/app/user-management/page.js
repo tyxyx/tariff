@@ -1,6 +1,6 @@
 "use client"; // 1. Needs to be a Client Component to use state
 
-import { useState } from "react"; // 2. Import useState
+import { useState, useEffect } from "react"; // 2. Import useState
 import {
   Card,
   CardHeader,
@@ -13,15 +13,46 @@ import { colors } from "@/styles/colors";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/PageHeader";
 import { SignupForm } from "@/components/signup-form"; // 3. Import the SignupForm
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/utils/apiClient";
 
 export default function UserDashboard() {
   const [showAddUserForm, setShowAddUserForm] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+
+  const router = useRouter();
 
   const handleUserAdded = () => {
     setShowAddUserForm(false); // Close the form
     // Refresh the UserTable. GAHH NO TIME LIAO
     window.location.reload();
   };
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchMe = async () => {
+      try {
+        const meRes = await apiFetch(
+          `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
+        );
+        if (!meRes.ok) {
+          console.log("meRes not ok");
+          console.error("Failed to fetch current user. Status:", meRes.status);
+          return;
+        }
+        const meData = await meRes.json();
+        if (!mounted) return;
+        console.log("my current user is: ", meData.role);
+        setCurrentUserRole(meData.role);
+      } catch (e) {
+        console.error("Error fetching current user:", e);
+      }
+    };
+    fetchMe();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div
@@ -40,9 +71,11 @@ export default function UserDashboard() {
                 </CardDescription>
               </div>
 
-              <Button onClick={() => setShowAddUserForm(true)}>
-                Add New User
-              </Button>
+              {currentUserRole && currentUserRole !== "USER" && (
+                <Button onClick={() => setShowAddUserForm(true)}>
+                  Add New User
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
