@@ -108,7 +108,7 @@ public class SecurityConfig {
       allowedOrigins.add("http://" + frontendHost + ":3000");
     }
     // Always allow localhost for local development
-    allowedOrigins.add("http://localhost:3000");
+    // allowedOrigins.add("http://" + frontendHost +":3000");
     configuration.setAllowedOrigins(allowedOrigins);
     configuration.setAllowedMethods(
       List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
