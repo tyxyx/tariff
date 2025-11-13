@@ -29,7 +29,7 @@ jobs:
           sudo docker image prune -a -f
           # sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend:${{ inputs.docker_image_tag }}
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/tariffbackend
-          sudo echo "Pulled image: ${{ secrets.DOCKER_USERNAME }}/tariffbackend" >> ~/deploy-backend.log
+          sudo echo "$(date '+%Y-%m-%d %H:%M:%S') Pulled image: ${{ secrets.DOCKER_USERNAME }}/tariffbackend" >> ~/deploy-backend.log
           # Stop existing services
           sudo docker compose down || true
           
