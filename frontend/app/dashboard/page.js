@@ -25,6 +25,7 @@ export default function DashboardPage() {
           `http://${process.env.NEXT_PUBLIC_BACKEND_EC2_HOST}:8080/api/users/me`
         );
         if (!meRes.ok) {
+          console.log("meRes not ok");
           console.error("Failed to fetch current user. Status:", meRes.status);
           return;
         }
