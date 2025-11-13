@@ -123,7 +123,7 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
-          {currentUserRole === 'ADMIN' && (
+          {currentUserRole === 'ADMIN'||'SUPER_ADMIN' && (
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <Server className="h-12 w-12 text-primary mb-4" />
@@ -139,7 +139,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-          {currentUserRole === 'ADMIN' && (
+          {currentUserRole === 'ADMIN'||'SUPER_ADMIN' && (
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <UserCog className="h-12 w-12 text-primary mb-4" />

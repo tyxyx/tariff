@@ -540,7 +540,7 @@ export default function CalculatorPage() {
 
                       // Allow only integers - remove decimal points if any
                       val = val.split(".")[0];
-                      setQuantity(val === "" ? "" : Number(val));
+                      setQuantity(val === "" ? "" : val);
                     }}
                     placeholder="Enter quantity"
                   />
