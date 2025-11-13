@@ -30,6 +30,15 @@ export default function HeatmapPage() {
         };
         fetchProducts();
     }, []);
+    
+    // pagination state: 20 rows per page
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 20;
+
+    // reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedOrigin, mode, hideExpired, tariffs]);
         
         // --- caching helpers: try cookie first, fallback to localStorage ---
         const clearTariffsCache = useCallback(() => {
@@ -236,7 +245,7 @@ export default function HeatmapPage() {
             };
 
             // sort: by country, then active before expired, then by expiry (most recent first)
-            const sorted = filtered.slice().sort((a, b) => {
+                const sorted = filtered.slice().sort((a, b) => {
                 const aName = (getCountryName(a) || '').toLowerCase();
                 const bName = (getCountryName(b) || '').toLowerCase();
                 if (aName !== bName) return aName.localeCompare(bName);
@@ -260,6 +269,14 @@ export default function HeatmapPage() {
             const count = sorted.length;
             const avgAd = (sorted.reduce((s, t) => s + (t.adValoremRate || 0), 0) / Math.max(1, count)).toFixed(4);
             const avgSpec = (sorted.reduce((s, t) => s + (t.specificRate || 0), 0) / Math.max(1, count)).toFixed(2);
+
+            // pagination calculations (use local rp to avoid NaN)
+            const rp = Number(rowsPerPage || 20);
+            const totalPages = Math.max(1, Math.ceil(count / rp));
+            const safePage = Math.min(Math.max(1, Number(currentPage || 1)), totalPages);
+            const startIdx = (safePage - 1) * rp;
+            const pageItems = sorted.slice(startIdx, startIdx + rp);
+
             return (
                 <div>
                     <div className="mb-2 text-sm text-gray-300">Matches: {count} — Avg ad-valorem: {avgAd} — Avg specific: {avgSpec}</div>
@@ -276,31 +293,95 @@ export default function HeatmapPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {sorted.map(t => {
+                                {pageItems.map(t => {
                                     const expiryRaw = t.expiryDate ?? t.endDate ?? t.validUntil ?? null;
                                     const expired = isExpired(t);
                                     const rowStyle = { borderTop: '1px solid rgba(255,255,255,0.05)', ...(expired ? { backgroundColor: 'rgba(255,0,0,0.06)' } : {}) };
                                     return (
-                                        <tr key={t.id} style={rowStyle}>
-                                            <td className="pr-4 py-2">{mode === 'export' ? (t.destCountry?.name ?? '-') : (t.originCountry?.name ?? '-')}</td>
-                                            <td className="pr-4 py-2">{t.effectiveDate ?? '-'}</td>
-                                            <td className="pr-4 py-2">{expiryRaw ?? '-'}</td>
-                                            <td className="pr-4 py-2">{t.adValoremRate ?? '-'}</td>
-                                            <td className="pr-4 py-2">{t.specificRate ?? '-'}</td>
-                                            <td className="pr-4 py-2">{(t.products || [])
-                                                .map((p) => {
-                                                    const code = productCodeVal(p);
-                                                    const normalize = (q) => q?.HTS_code ?? q?.hts_code ?? q?.htscode ?? q?.HTSCode ?? q?.code ?? q?.id ?? "";
-                                                    const found = (productsList || []).find((q) => normalize(q) === code);
-                                                    return found?.name ?? p?.name ?? code;
-                                                })
-                                                .slice(0,5)
-                                                .join(', ')}{(t.products || []).length > 5 ? '…' : ''}</td>
-                                        </tr>
+                                      <tr key={t.id} style={rowStyle}>
+                                        <td className="pr-4 py-2">
+                                          {mode === "export"
+                                            ? t.destCountry?.name ?? "-"
+                                            : t.originCountry?.name ?? "-"}
+                                        </td>
+                                        <td className="pr-4 py-2">
+                                          {t.effectiveDate ?? "-"}
+                                        </td>
+                                        <td className="pr-4 py-2">
+                                          {expiryRaw ?? "-"}
+                                        </td>
+                                        <td className="pr-4 py-2">
+                                          {t.adValoremRate ?? "-"}
+                                        </td>
+                                        <td className="pr-4 py-2">
+                                          {t.specificRate ?? "-"}
+                                        </td>
+                                        <td className="pr-4 py-2">
+                                          {(t.products || [])
+                                            .map((p) => {
+                                              const code = productCodeVal(p);
+                                              const normalize = (q) =>
+                                                q?.HTS_code ??
+                                                q?.hts_code ??
+                                                q?.htscode ??
+                                                q?.HTSCode ??
+                                                q?.code ??
+                                                q?.id ??
+                                                "";
+                                              const found = (
+                                                productsList || []
+                                              ).find(
+                                                (q) => normalize(q) === code
+                                              );
+                                              const name =
+                                                p?.name ?? found?.name ?? code;
+                                              return name === code
+                                                ? code
+                                                : `${name} (${code})`;
+                                            })
+                                            .slice(0, 5)
+                                            .join(", ")}
+                                          {(t.products || []).length > 5
+                                            ? "…"
+                                            : ""}
+                                        </td>
+                                      </tr>
                                     );
                                 })}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Pagination controls */}
+                    <div className="mt-3 flex items-center justify-between text-sm text-gray-300">
+                        <div>
+                            Showing {count === 0 ? 0 : startIdx + 1}–{Math.min(startIdx + pageItems.length, count)} of {count}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="px-2 py-1 bg-gray-800 text-white rounded disabled:opacity-50"
+                                onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+                                disabled={safePage <= 1}
+                            >
+                                Prev
+                            </button>
+                            <select
+                                className="bg-black border text-white px-2 py-1 rounded"
+                                value={safePage}
+                                onChange={(e) => setCurrentPage(Number(e.target.value))}
+                            >
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))}
+                            </select>
+                            <button
+                                className="px-2 py-1 bg-gray-800 text-white rounded disabled:opacity-50"
+                                onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+                                disabled={safePage >= totalPages}
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 </div>
             );

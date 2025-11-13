@@ -573,7 +573,7 @@ export default function HeatmapPage() {
     URL.revokeObjectURL(url);
   };
 
-  function FilteredTable({ tariffs, origin, mode }) {
+  function FilteredTable({ tariffs, origin, mode, currentPage, setCurrentPage, rowsPerPage }) {
     if (!origin)
       return (
         <div className="text-gray-400">
@@ -637,6 +637,13 @@ export default function HeatmapPage() {
     const avgSpec = (
       sorted.reduce((s, t) => s + (t.specificRate || 0), 0) / Math.max(1, count)
     ).toFixed(2);
+
+    // pagination calculations (use local fallback for rowsPerPage)
+    const rp = Number(rowsPerPage || 20);
+    const totalPages = Math.max(1, Math.ceil(count / rp));
+    const safePage = Math.min(Math.max(1, Number(currentPage || 1)), totalPages);
+    const startIdx = (safePage - 1) * rp;
+    const pageItems = sorted.slice(startIdx, startIdx + rp);
     return (
       <div>
         <div className="mb-2 text-sm text-gray-300">
@@ -661,7 +668,7 @@ export default function HeatmapPage() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((t) => {
+              {pageItems.map((t) => {
                 const expiryRaw =
                   t.expiryDate ?? t.endDate ?? t.validUntil ?? null;
                 const expired = isExpired(t);
@@ -687,7 +694,8 @@ export default function HeatmapPage() {
                           const normalize = (q) =>
                             q?.HTS_code ?? q?.hts_code ?? q?.htscode ?? q?.HTSCode ?? q?.code ?? q?.id ?? "";
                           const found = (productsList || []).find((q) => normalize(q) === code);
-                          return found?.name ?? p?.name ?? code;
+                          const name = p?.name ?? found?.name ?? code;
+                          return name === code ? code : `${name} (${code})`;
                         })
                         .slice(0, 5)
                         .join(", ")}
@@ -713,6 +721,40 @@ export default function HeatmapPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination controls */}
+        <div className="mt-3 flex items-center justify-between text-sm text-gray-300">
+          <div>
+            Showing {count === 0 ? 0 : startIdx + 1}–{Math.min(startIdx + pageItems.length, count)} of {count}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-2 py-1 bg-gray-800 text-white rounded disabled:opacity-50"
+              onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+              disabled={safePage <= 1}
+            >
+              Prev
+            </button>
+            <select
+              className="bg-black border text-white px-2 py-1 rounded"
+              value={safePage}
+              onChange={(e) => setCurrentPage(Number(e.target.value))}
+            >
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <button
+              className="px-2 py-1 bg-gray-800 text-white rounded disabled:opacity-50"
+              onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -737,6 +779,15 @@ export default function HeatmapPage() {
         .map((code) => ({ code, name: code }))
     )
     .filter((x) => x && (x.code || x.name));
+
+  // pagination state: 20 rows per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 20;
+
+  // reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedOrigin, mode, hideExpired, tariffs]);
 
   return (
     <div
@@ -1009,6 +1060,9 @@ export default function HeatmapPage() {
               tariffs={tariffs}
               origin={selectedOrigin}
               mode={mode}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              rowsPerPage={rowsPerPage}
             />
           </div>
         )}
