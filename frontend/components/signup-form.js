@@ -84,8 +84,10 @@ export function SignupForm({ isAdmin = false, onSuccess }) {
       if (login_data.token) {
         Cookies.set("auth_token", login_data.token, {
           expires: 7,
-          secure: true,
-          sameSite: "Strict",
+          secure: false,
+          // secure: true,
+          // sameSite: "Strict",
+          sameSite: "Lax",
         });
       }
 
