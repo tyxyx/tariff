@@ -1,21 +1,29 @@
 package com.tariff.backend.controller;
 
-import com.tariff.backend.dto.UserLoginDTO;
-import com.tariff.backend.dto.UserRequestDTO;
-import com.tariff.backend.model.User;
-import com.tariff.backend.service.JwtService;
-import com.tariff.backend.service.UserService;
-import jakarta.validation.Valid;
 import java.util.List;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tariff.backend.dto.UserLoginDTO;
+import com.tariff.backend.dto.UserRequestDTO;
+import com.tariff.backend.model.User;
+import com.tariff.backend.service.JwtService;
+import com.tariff.backend.service.UserService;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping(path = "api/users")
@@ -60,8 +68,8 @@ public class UserController {
 
     // ✅ Set HttpOnly cookie
     Cookie cookie = new Cookie("auth_token", jwtToken);
-    cookie.setHttpOnly(true);  // Prevents JavaScript access
-    cookie.setSecure(true);    // Only sent over HTTPS (set false for local dev)
+    cookie.setHttpOnly(false);  // Prevents JavaScript access
+    cookie.setSecure(false);    // Only sent over HTTPS (set false for local dev)
     cookie.setPath("/");       // Available for all paths
     cookie.setMaxAge(3 * 24 * 60 * 60); // 3 days in seconds
     // cookie.setAttribute("SameSite", "Strict"); // CSRF protection

@@ -189,7 +189,7 @@ export default function CalculatorPage() {
   // Render summary using these values
   const summaryAmountSpecific = summarySpecificRate * quantity;
   const summaryAmountAdValorem =
-    (summaryAdValoremRate / 100) * (unitPrice * quantity);
+    (summaryAdValoremRate) * (unitPrice * quantity);
 
   function resetSummaryAndInputs() {
     setExportCountry("");
@@ -219,21 +219,19 @@ export default function CalculatorPage() {
           {/* Tabs */}
           <div className="flex border-b border-gray-700 mb-6">
             <button
-              className={`px-4 py-2 text-white font-medium border-b-2 ${
-                activeTab === "Calculator"
-                  ? "border-blue-500"
-                  : "border-transparent"
-              }`}
+              className={`px-4 py-2 text-white font-medium border-b-2 ${activeTab === "Calculator"
+                ? "border-blue-500"
+                : "border-transparent"
+                }`}
               onClick={() => setActiveTab("Calculator")}
             >
               Calculator
             </button>
             <button
-              className={`px-4 py-2 text-white font-medium border-b-2 ${
-                activeTab === "Simulation"
-                  ? "border-blue-500"
-                  : "border-transparent"
-              }`}
+              className={`px-4 py-2 text-white font-medium border-b-2 ${activeTab === "Simulation"
+                ? "border-blue-500"
+                : "border-transparent"
+                }`}
               onClick={() => setActiveTab("Simulation")}
             >
               Simulation
@@ -361,9 +359,17 @@ export default function CalculatorPage() {
                     className="w-full border rounded px-3 py-2"
                     style={{ backgroundColor: "black", color: "white" }}
                     value={unitPrice}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/^0+/, "");
-                      setUnitPrice(val === "" ? "" : Number(val));
+                    onChange={e => {
+                      let val = e.target.value;
+
+                      // If the value starts with ".", prepend "0"
+                      if (val.startsWith(".")) val = "0" + val;
+                      // Remove multiple leading zeros before an integer (keep single 0 before decimal)
+                      val = val.replace(/^0+(?=\d)/, "");
+                      // Only allow valid numeric input (digits with max one decimal point)
+                      if (/^\d*\.?\d*$/.test(val)) {
+                        setUnitPrice(val);
+                      }
                     }}
                     placeholder="Enter unit price"
                   />
@@ -376,6 +382,7 @@ export default function CalculatorPage() {
                     type="number"
                     min={0}
                     step="any"
+
                     value={
                       activeTab === "Calculator"
                         ? specificRate
@@ -394,7 +401,7 @@ export default function CalculatorPage() {
 
                 <div>
                   <label className="block mb-1 font-medium">
-                    Ad Valorem Rate (%)
+                    Ad Valorem Rate
                   </label>
                   <input
                     type="number"
@@ -549,9 +556,17 @@ export default function CalculatorPage() {
                     className="w-full border rounded px-3 py-2"
                     style={{ backgroundColor: "black", color: "white" }}
                     value={unitPrice}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/^0+/, "");
-                      setUnitPrice(val === "" ? "" : Number(val));
+                    onChange={e => {
+                      let val = e.target.value;
+
+                      // If the value starts with ".", prepend "0"
+                      if (val.startsWith(".")) val = "0" + val;
+                      // Remove multiple leading zeros before an integer (keep single 0 before decimal)
+                      val = val.replace(/^0+(?=\d)/, "");
+                      // Only allow valid numeric input (digits with max one decimal point)
+                      if (/^\d*\.?\d*$/.test(val)) {
+                        setUnitPrice(val);
+                      }
                     }}
                     placeholder="Enter unit price"
                   />
@@ -567,18 +582,24 @@ export default function CalculatorPage() {
                     placeholder="0"
                     value={
                       !specificRateFocused &&
-                      (simSpecificRate === "" || simSpecificRate === "0")
-                        ? "" // placeholder is shown
-                        : removeLeadingZeros(simSpecificRate)
+                        (simSpecificRate === "" || simSpecificRate === "0")
+                        ? ""
+                        : simSpecificRate
                     }
                     onFocus={() => {
                       setSpecificRateFocused(true);
                       if (simSpecificRate === "0") setSimSpecificRate("");
                     }}
                     onBlur={() => setSpecificRateFocused(false)}
-                    onChange={(e) =>
-                      setSimSpecificRate(e.target.value.replace(/^0+/, ""))
-                    }
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      // If the value starts with ".", prepend "0"
+                      if (val.startsWith(".")) val = "0" + val;
+                      // Remove multiple leading zeros before any digits (but keep for decimals)
+                      val = val.replace(/^0+(?=\d)/, "");
+                      // Allow only digits and at most one decimal point
+                      if (/^\d*\.?\d*$/.test(val)) setSimSpecificRate(val);
+                    }}
                     className="w-full border rounded px-3 py-2"
                     style={{ backgroundColor: "black", color: "white" }}
                   />
@@ -586,7 +607,7 @@ export default function CalculatorPage() {
 
                 <div>
                   <label className="block mb-1 font-medium">
-                    Ad Valorem Rate (%)
+                    Ad Valorem Rate
                   </label>
                   <input
                     type="number"
@@ -595,18 +616,24 @@ export default function CalculatorPage() {
                     placeholder="0"
                     value={
                       !adValoremRateFocused &&
-                      (simAdValoremRate === "" || simAdValoremRate === "0")
+                        (simAdValoremRate === "" || simAdValoremRate === "0")
                         ? ""
-                        : removeLeadingZeros(simAdValoremRate)
+                        : simAdValoremRate
                     }
                     onFocus={() => {
                       setAdValoremRateFocused(true);
                       if (simAdValoremRate === "0") setSimAdValoremRate("");
                     }}
                     onBlur={() => setAdValoremRateFocused(false)}
-                    onChange={(e) =>
-                      setSimAdValoremRate(e.target.value.replace(/^0+/, ""))
-                    }
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      // If the value starts with ".", prepend "0"
+                      if (val.startsWith(".")) val = "0" + val;
+                      // Remove multiple leading zeros before any digits (but keep for decimals)
+                      val = val.replace(/^0+(?=\d)/, "");
+                      // Allow only digits and at most one decimal point
+                      if (/^\d*\.?\d*$/.test(val)) setSimAdValoremRate(val);
+                    }}
                     className="w-full border rounded px-3 py-2"
                     style={{ backgroundColor: "black", color: "white" }}
                   />
@@ -649,7 +676,7 @@ export default function CalculatorPage() {
                 <strong>Specific Rate:</strong> {summarySpecificRate}
               </li>
               <li>
-                <strong>Ad Valorem Rate (%):</strong> {summaryAdValoremRate}
+                <strong>Ad Valorem Rate:</strong> {summaryAdValoremRate}
               </li>
               <li>
                 <strong>Specific Duty Amount:</strong>{" "}
