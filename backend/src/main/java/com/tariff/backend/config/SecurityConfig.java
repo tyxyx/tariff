@@ -1,7 +1,7 @@
 package com.tariff.backend.config;
 
-import com.tariff.backend.component.JwtAuthFilter;
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +17,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.tariff.backend.component.JwtAuthFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -98,7 +100,16 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Replace with your frontend URL
+    // Allow the frontend EC2 host (if provided via env) and localhost for local dev.
+    // Use a dynamic list so we don't pass null into List.of
+    java.util.ArrayList<String> allowedOrigins = new java.util.ArrayList<>();
+    if (frontendHost != null && !frontendHost.isBlank()) {
+      // Expect frontendHost to include scheme and port
+      allowedOrigins.add(frontendHost);
+    }
+    // Always allow localhost for local development
+    allowedOrigins.add("http://localhost:3000");
+    configuration.setAllowedOrigins(allowedOrigins);
     configuration.setAllowedMethods(
       List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
       // List.of("GET", "POST", "PUT","DELETE")
