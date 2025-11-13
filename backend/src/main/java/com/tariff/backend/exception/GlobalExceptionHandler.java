@@ -33,12 +33,8 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(BadRequestException.class)
-  public ResponseEntity<Map<String, String>> handleBadRequest(BadRequestException ex) {
-    Map<String, String> body = Collections.singletonMap(
-      "message",
-      ex.getMessage()
-    );
-    return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST); // 400
+  public ResponseEntity<String> handleBadRequest(BadRequestException ex) {
+    return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(NotFoundException.class)
