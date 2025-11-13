@@ -312,9 +312,7 @@ export default function CalculatorPage() {
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-medium">
-                    Export Country
-                  </label>
+                
                   <select
                     className="w-full border rounded px-3 py-2"
                     style={{ backgroundColor: "black", color: "white" }}
@@ -475,6 +473,24 @@ export default function CalculatorPage() {
                 </div>
                 <div>
                   <label className="block mb-1 font-medium">
+                    Calculation Date
+                  </label>
+                  <DatePicker
+                    selected={calculationDate}
+                    onChange={(date) => {
+                      resetSummaryAndInputs();
+                      setCalculationDate(date);
+                    }}
+                    selectsStart
+                    calculationDate={calculationDate}
+                    placeholderText="Select calculation date"
+                    className="w-full border rounded px-3 py-2"
+                    popperPlacement="bottom"
+                    style={{ backgroundColor: "black", color: "white" }}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
                     Export Country
                   </label>
                   <select
@@ -500,24 +516,7 @@ export default function CalculatorPage() {
                       ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block mb-1 font-medium">
-                    Calculation Date
-                  </label>
-                  <DatePicker
-                    selected={calculationDate}
-                    onChange={(date) => {
-                      resetSummaryAndInputs();
-                      setCalculationDate(date);
-                    }}
-                    selectsStart
-                    calculationDate={calculationDate}
-                    placeholderText="Select calculation date"
-                    className="w-full border rounded px-3 py-2"
-                    popperPlacement="bottom"
-                    style={{ backgroundColor: "black", color: "white" }}
-                  />
-                </div>
+
                 <div>
                   <label className="block mb-1 font-medium">Quantity</label>
                   <input
