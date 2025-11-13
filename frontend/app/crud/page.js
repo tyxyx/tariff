@@ -52,68 +52,33 @@ export default function HeatmapPage() {
 
   // --- caching helpers: try cookie first, fallback to localStorage ---
   const clearTariffsCache = useCallback(() => {
-    document.cookie = "tariffs_cache_v1=; path=/; max-age=0";
     try {
       localStorage.removeItem("tariffs_cache_v1");
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
   }, []);
 
   const getSavedTariffs = useCallback(() => {
     try {
-      // cookie name: tariffs_cache_v1
-      const match = document.cookie
-        .split("; ")
-        .find((r) => r.startsWith("tariffs_cache_v1="));
-      if (match) {
-        const raw = match.split("=")[1] || "";
-        if (raw) {
-          try {
-            return JSON.parse(decodeURIComponent(raw));
-          } catch (e) {
-            console.warn("Failed parsing tariffs cookie, clearing cache", e);
-            clearTariffsCache();
-          }
-        }
-      }
       const ls = localStorage.getItem("tariffs_cache_v1");
       if (ls) return JSON.parse(ls);
     } catch (e) {
       console.warn("getSavedTariffs error", e);
     }
     return null;
-  }, [clearTariffsCache]);
+  }, []);
 
   const saveTariffsToCookie = useCallback((obj) => {
     try {
       const s = JSON.stringify(obj || []);
-      const enc = encodeURIComponent(s);
-      // write cookie for 30 days
-      document.cookie = `tariffs_cache_v1=${enc}; path=/; max-age=${
-        30 * 24 * 60 * 60
-      }`;
-      // verify written value (cookie truncation possible)
-      const back =
-        (
-          document.cookie
-            .split("; ")
-            .find((r) => r.startsWith("tariffs_cache_v1=")) || ""
-        ).split("=")[1] || "";
-      if (back && back === enc) return;
-      // fallback to localStorage when cookie cannot hold payload
-      localStorage.setItem("tariffs_cache_v1", s);
-      console.warn(
-        "tariffs saved to localStorage because cookie was too small"
-      );
-    } catch (e) {
-      console.warn(
-        "saveTariffsToCookie error, falling back to localStorage",
-        e
-      );
       try {
-        localStorage.setItem("tariffs_cache_v1", JSON.stringify(obj || []));
-      } catch (e2) {
-        /* ignore */
+        localStorage.setItem("tariffs_cache_v1", s);
+      } catch (e) {
+        console.warn("Failed to save tariffs to localStorage", e);
       }
+    } catch (e) {
+      console.warn("saveTariffsToCookie error (localStorage-only)", e);
     }
   }, []);
 
@@ -156,8 +121,7 @@ export default function HeatmapPage() {
     fetchCountries();
   }, []);
 
-  // allow calling helpers from effect without listing them as deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // load cached tariffs on mount (uses stable callbacks)
   useEffect(() => {
     setLoading(true);
     // try cache first
@@ -198,7 +162,7 @@ export default function HeatmapPage() {
     };
 
     fetchFromServer();
-  }, []);
+  }, [getSavedTariffs, saveTariffsToCookie]);
 
   // refresh helper used by the "Refresh cache" button
   const refreshCacheAndFetch = useCallback(async () => {
