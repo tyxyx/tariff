@@ -1,6 +1,7 @@
 name: Frontend Coverage
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
@@ -10,6 +11,11 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-codecov.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   test:
@@ -34,12 +40,63 @@ jobs:
       - name: Run tests with coverage
         env:
           CI: 'true'
-        run: npm test -- --coverage --runInBand
+        run: npm test -- --coverage --runInBand --coverageReporters=text --coverageReporters=lcov --coverageReporters=json-summary
 
-      - name: Upload coverage to Codecov
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          COVERAGE=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE%"
+
+      - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           files: frontend/coverage/lcov.info
           flags: frontend
+          name: frontend-coverage
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
+      - name: Add coverage comment to PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.4.0
+        with:
+          lcov-file: frontend/coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: Frontend Test Coverage Report
+          delete-old-comments: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-results
+          path: |
+            frontend/coverage/
+            frontend/coverage/lcov-report/
+
+      - name: Create coverage badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ secrets.GIST_ID }}
+          filename: frontend-coverage.json
+          label: Frontend Coverage
+          message: ${{ steps.coverage.outputs.coverage }}%
+          valColorRange: ${{ steps.coverage.outputs.coverage }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Coverage Summary
+        run: |
+          echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lines | $(jq -r '.total.lines.pct' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Statements | $(jq -r '.total.statements.pct' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Functions | $(jq -r '.total.functions.pct' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branches | $(jq -r '.total.branches.pct' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY

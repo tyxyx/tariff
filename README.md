@@ -1,4 +1,12 @@
+**Total:**
 [![codecov](https://codecov.io/github/tyxyx/tariff/graph/badge.svg?token=6XH81GKBNP)](https://codecov.io/github/tyxyx/tariff)
+|
+**Backend:** 
+[![Backend Coverage](https://codecov.io/gh/tyxyx/tariff/branch/main/graph/badge.svg?flag=backend )](https://codecov.io/github/tyxyx/tariff)
+|
+**Frontend:** 
+[![Frontend Coverage](https://codecov.io/gh/tyxyx/tariff/branch/main/graph/badge.svg?flag=frontend )](https://codecov.io/github/tyxyx/tariff)
+
 
 # TARIFF  
 **Trade Agreements Regulating Imports and Foreign Fees**

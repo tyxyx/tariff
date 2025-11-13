@@ -79,6 +79,9 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           NEXT_PUBLIC_BACKEND_EC2_HOST=${{ secrets.BACKEND_EC2_HOST }}
+        secret-envs: |
+          NEXT_PUBLIC_BACKEND_EC2_HOST=${{ secrets.BACKEND_EC2_HOST }}
+          
   deploy:
     needs: docker
     if: github.ref == 'refs/heads/main'

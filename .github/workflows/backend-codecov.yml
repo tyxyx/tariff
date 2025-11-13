@@ -1,6 +1,7 @@
 name: Backend Coverage
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
@@ -10,6 +11,12 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/backend-codecov.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
 
 jobs:
   test:
@@ -36,12 +43,57 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Run tests with coverage
-        run: ./mvnw -B org.jacoco:jacoco-maven-plugin:prepare-agent test org.jacoco:jacoco-maven-plugin:report
+        run: ./mvnw -B clean test
 
-      - name: Upload coverage to Codecov
+      - name: Generate JaCoCo Badge
+        id: jacoco
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          jacoco-csv-file: backend/target/site/jacoco/jacoco.csv
+          badges-directory: backend/.github/badges
+          generate-branches-badge: true
+          generate-summary: true
+
+      - name: Log coverage percentage
+        run: |
+          echo "Coverage: ${{ steps.jacoco.outputs.coverage }}"
+          echo "Branch Coverage: ${{ steps.jacoco.outputs.branches }}"
+
+      - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           files: backend/target/site/jacoco/jacoco.xml
           flags: backend
+          name: backend-coverage
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
+      - name: Add coverage comment to PR
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.7.1
+        with:
+          paths: backend/target/site/jacoco/jacoco.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 30
+          min-coverage-changed-files: 50
+          title: Backend Test Coverage Report
+          update-comment: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: |
+            backend/target/surefire-reports/
+            backend/target/site/jacoco/
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'backend/target/surefire-reports/TEST-*.xml'
+          check_name: Backend Test Results
+          detailed_summary: true
+          include_passed: true
