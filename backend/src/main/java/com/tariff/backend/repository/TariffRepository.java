@@ -40,13 +40,20 @@ public interface TariffRepository extends JpaRepository<Tariff, UUID> {
         """)
   List<Tariff> listAll();
 
-  // New method to fetch tariffs by origin country code and product name
+  // // New method to fetch tariffs by origin country code and product name
+  // @Query("""
+  //         SELECT DISTINCT t FROM Tariff t
+  //         JOIN t.products p
+  //         WHERE t.originCountry.code = :originCountryCode
+  //         AND p.name = :productName
+  //     """)
   @Query("""
-          SELECT DISTINCT t FROM Tariff t
-          JOIN t.products p
-          WHERE t.originCountry.code = :originCountryCode
-          AND p.name = :productName
-      """)
+    SELECT DISTINCT t FROM Tariff t
+    JOIN FETCH t.destCountry
+    JOIN t.products p
+    WHERE t.originCountry.code = :originCountryCode
+    AND p.name = :productName
+""")
   List<Tariff> getTariffsByOriginCountryCodeAndProduct(String originCountryCode, String productName);
 
 }

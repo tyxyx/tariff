@@ -16,6 +16,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.http.HttpMethod;
 
 // auth middleware component
 @Component
@@ -27,6 +29,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
   private final UserDetailsService userDetailsService;
 
+  private static final AntPathMatcher pathMatcher = new AntPathMatcher();
+
   public JwtAuthFilter(
     JwtService jwtService,
     UserDetailsService userDetailsService,
@@ -35,6 +39,33 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     this.jwtService = jwtService;
     this.userDetailsService = userDetailsService;
     this.handlerExceptionResolver = handlerExceptionResolver;
+  }
+
+  @Override
+  protected boolean shouldNotFilter(HttpServletRequest request)
+    throws ServletException {
+    String path = request.getRequestURI();
+
+    // Skip all OPTIONS requests (for CORS preflight)
+    if (request.getMethod().equals(HttpMethod.OPTIONS.name())) {
+      return true;
+    }
+
+    // List all your public paths from SecurityConfig here.
+    // This return true (meaning "do not filter") if the path matches.
+    return (
+      pathMatcher.match("/api/users/register", path) ||
+      pathMatcher.match("/api/users/login", path) ||
+      pathMatcher.match("/api/users/logout", path) ||
+      pathMatcher.match("/swagger-ui/**", path) ||
+      pathMatcher.match("/v3/api-docs/**", path) ||
+      pathMatcher.match("/swagger-ui.html", path) ||
+      pathMatcher.match("/health", path) ||
+      pathMatcher.match("/api/tariffs/**", path) ||
+      pathMatcher.match("/api/products/**", path) ||
+      pathMatcher.match("/api/countries/**", path) ||
+      pathMatcher.match("/api/predict", path)
+    );
   }
 
   @Override
