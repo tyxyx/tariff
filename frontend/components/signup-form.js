@@ -81,13 +81,15 @@ export function SignupForm({ isAdmin = false, onSuccess }) {
         return;
       }
 
-      if (login_data.token) {
-        Cookies.set("auth_token", login_data.token, {
-          expires: 7,
-          secure: true,
-          sameSite: "Strict",
-        });
-      }
+      // if (login_data.token) {
+      //   Cookies.set("auth_token", login_data.token, {
+      //     expires: 7,
+      //     secure: false,
+      //     // secure: true,
+      //     // sameSite: "Strict",
+      //     sameSite: "Lax",
+      //   });
+      // }
 
       setSuccess(login_data.message || "Login successful!");
 
