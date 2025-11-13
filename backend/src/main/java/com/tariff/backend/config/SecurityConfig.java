@@ -76,7 +76,7 @@ public class SecurityConfig {
           // 2. User "Self-Service" Rules (Authenticated)
           // Placed *before* Admin rules to be matched first
           .requestMatchers(HttpMethod.PUT, "/api/users/me/change-password").authenticated() // For changing *own* password
-          .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated() // For getting *own* profile
+          .requestMatchers(HttpMethod.GET, "/api/users/me").permitAll() // For getting *own* profile
 
           // 3. SUPER_ADMIN Rules (Most specific roles first)
           .requestMatchers(HttpMethod.PUT, "/api/users/downgrade-role").hasRole("SUPER_ADMIN")
