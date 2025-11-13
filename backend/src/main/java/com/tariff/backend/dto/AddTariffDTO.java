@@ -24,6 +24,12 @@ public class AddTariffDTO {
   @NotNull(message = "Rate is required")
   private Double rate;
 
+  // ad valorem rate in percentage (e.g. 10.0 means 10%) — optional when 'rate' decimal is provided
+  private Double adValoremRate;
+
+  // optional specific rate (absolute amount)
+  private Double specificRate;
+
   private Boolean enabled;
 
   @NotNull(message = "HTS code is required")
@@ -74,11 +80,29 @@ public class AddTariffDTO {
     this.rate = rate;
   }
 
-  public boolean isEnabled() {
-    return enabled;
+  public Double getSpecificRate() {
+    return specificRate;
   }
 
-  public void setEnabled(boolean enabled) {
+  public void setSpecificRate(Double specificRate) {
+    this.specificRate = specificRate;
+  }
+
+  public Double getAdValoremRate() {
+    return adValoremRate;
+  }
+
+  public void setAdValoremRate(Double adValoremRate) {
+    this.adValoremRate = adValoremRate;
+  }
+
+  // Null-safe accessor: default to true when not provided
+  public boolean isEnabled() {
+    return Boolean.TRUE.equals(enabled) || enabled == null;
+  }
+
+  // Accept nullable boolean from JSON
+  public void setEnabled(Boolean enabled) {
     this.enabled = enabled;
   }
 

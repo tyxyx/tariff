@@ -36,6 +36,9 @@ public class Tariff {
   private Double adValoremRate;
   private Double specificRate;
 
+  // whether this tariff is enabled (DB has NOT NULL constraint)
+  private boolean enabled = true;
+
   private long minQuantity;
   private long maxQuantity;
 
