@@ -128,7 +128,7 @@ export default function DashboardPage() {
                 <Server className="h-12 w-12 text-primary mb-4" />
                 <CardTitle>Admin Panel</CardTitle>
                 <CardDescription>
-                  Manage users and administrative settings
+                  CRUD functionality on tariff data
                 </CardDescription>
               </CardHeader>
               <CardContent>
