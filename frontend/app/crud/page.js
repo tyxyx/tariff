@@ -897,7 +897,7 @@ export default function HeatmapPage() {
                       >
                         <option value="">-- select origin --</option>
                         {origins.map((o) => (
-                          <option key={o} value={o}>
+                          <option key={o} value={o} disabled={o === formState.dest}>
                             {o}
                           </option>
                         ))}
@@ -914,7 +914,7 @@ export default function HeatmapPage() {
                       >
                         <option value="">-- select destination --</option>
                         {destinationNames.map((d) => (
-                          <option key={d} value={d}>
+                          <option key={d} value={d} disabled={d === formState.origin}>
                             {d}
                           </option>
                         ))}
