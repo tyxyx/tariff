@@ -77,19 +77,6 @@ jobs:
             frontend/coverage/
             frontend/coverage/lcov-report/
 
-      - name: Create coverage badge
-        if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_SECRET }}
-          gistID: ${{ secrets.GIST_ID }}
-          filename: frontend-coverage.json
-          label: Frontend Coverage
-          message: ${{ steps.coverage.outputs.coverage }}%
-          valColorRange: ${{ steps.coverage.outputs.coverage }}
-          maxColorRange: 100
-          minColorRange: 0
-
       - name: Coverage Summary
         run: |
           echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
