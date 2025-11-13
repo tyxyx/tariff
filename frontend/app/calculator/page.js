@@ -312,7 +312,9 @@ export default function CalculatorPage() {
                   />
                 </div>
                 <div>
-                  Export Country
+                  <label className="block mb-1 font-medium">
+                    Export Country
+                  </label>
                   <select
                     className="w-full border rounded px-3 py-2"
                     style={{ backgroundColor: "black", color: "white" }}
