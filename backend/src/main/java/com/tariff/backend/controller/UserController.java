@@ -45,7 +45,6 @@ public class UserController {
   //   Return users with token for testing
   @GetMapping("/me")
   public ResponseEntity<User> authenticatedUser() {
-    System.out.println( "Fetching authenticated user" );
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     User currentUser = (User) authentication.getPrincipal();
     return ResponseEntity.ok(currentUser);
@@ -76,7 +75,7 @@ public class UserController {
     // cookie.setAttribute("SameSite", "Strict"); // CSRF protection
     
     response.addCookie(cookie);
-
+    System.out.println(cookie);
     return ResponseEntity.ok(
       new UserLoginDTO(jwtToken, jwtService.getExpirationTime())
     );
