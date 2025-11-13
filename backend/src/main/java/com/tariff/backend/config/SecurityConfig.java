@@ -68,7 +68,8 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.GET, "/health").permitAll() // for healthchecks
 
           // OTHER ENDPOINTS
-          .requestMatchers("/api/tariffs/**").permitAll()
+          .requestMatchers(HttpMethod.GET, "/api/tariffs/**").permitAll()
+          .requestMatchers("/api/tariffs/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
           .requestMatchers("/api/products/**").permitAll()
           .requestMatchers("/api/countries/**").permitAll()
           .requestMatchers(HttpMethod.POST, "/api/predict").permitAll()
