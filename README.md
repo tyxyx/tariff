@@ -80,6 +80,10 @@ It is tailored for the **Technology Sector**, focusing on trade-related data man
   - Export tariff data and calculation results in formats such as **CSV**.  
   - Enables further data analysis and storage for reference.  
 
+- **Tariff Change Prediction (AI-Powered)**
+  - Users can upload trade-related PDFs (e.g., invoices, agreements, shipment details) directly through the interface.
+  - The platform uses machine learning to automatically analyze the uploaded document, predict potential tariff changes or risks, and generate a concise summary of its findings.
+  - The prediction summary includes key data, explainable model results, and actionable insights based on historical tariff trends.
 ---
 
 ## ✅ Summary  
