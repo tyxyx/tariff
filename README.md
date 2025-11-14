@@ -67,8 +67,10 @@ It is tailored for the **Technology Sector**, focusing on trade-related data man
 - **Backend**: Spring Boot (Java) with Swagger UI for API documentation  
 - **Database**: PostgreSQL  
 - **Deployment**:  
-  - **Backend & Database**: AWS EC2  
-  - **Frontend (static assets)**: AWS S3  
+  - **Backend **: AWS EC2
+  - Database **: AWS RDS
+  - **Frontend **: AWS EC2
+  - **Scrapper **: AWS EC2
 
 ---
 
@@ -77,12 +79,6 @@ It is tailored for the **Technology Sector**, focusing on trade-related data man
 - **Data Exportability**  
   - Export tariff data and calculation results in formats such as **CSV**.  
   - Enables further data analysis and storage for reference.  
-
-- **Visualization Page**  
-  - Interactive **geographical heat map** using **Leaflet.js** and **Heatmap.js**.  
-  - Governments and organizations can use it to:  
-    - Decide which countries to trade with.  
-    - Predict trade opportunities and risks.  
 
 ---
 
