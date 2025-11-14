@@ -65,7 +65,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       pathMatcher.match("/v3/api-docs/**", path) ||
       pathMatcher.match("/swagger-ui.html", path) ||
       pathMatcher.match("/health", path) ||
-      pathMatcher.match("/api/tariffs/**", path) ||
+      // pathMatcher.match("/api/tariffs/**", path) ||
       pathMatcher.match("/api/products/**", path) ||
       pathMatcher.match("/api/countries/**", path) ||
       pathMatcher.match("/api/predict", path)
